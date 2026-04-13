@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { getSupabaseBrowserClient } from '../lib/supabase';
 
 const SAMPLE_JD = 'Senior operations associate for a fast-growing hiring platform.\n\nYou will own candidate intake, coordinate with recruiters, keep records organized, and help teams move quickly. Strong communication, attention to detail, and comfort with spreadsheets are important. Familiarity with ATS tools, reporting, and basic SQL is a plus.';
 const SAMPLE_SKILLS = 'Coordinated student projects, built simple dashboards in spreadsheets, wrote basic SQL queries, and communicated with teachers and classmates. Comfortable with structured workflows, checklists, and repetitive admin tasks.';
@@ -255,7 +255,7 @@ export default function Home() {
 
               <div className="form-actions">
                 <button className="button" type="submit" disabled={loading}>
-                  {loading ? 'Analyzing\u2026' : 'Analyze match'}
+                  {loading ? 'Analyzing…' : 'Analyze match'}
                 </button>
                 <span className="form-status">{loading ? 'Waiting on the OpenRouter response.' : 'Result appears instantly in the right panel.'}</span>
               </div>
@@ -278,7 +278,7 @@ export default function Home() {
                 <div className="metric-row">
                   <div className="metric">
                     <span>Readiness score</span>
-                    <strong>{readinessScore === null ? '\u2014' : readinessScore}</strong>
+                    <strong>{readinessScore === null ? '—' : readinessScore}</strong>
                   </div>
                   <div className="metric">
                     <span>Strong matches</span>
@@ -308,14 +308,14 @@ export default function Home() {
                           <div className="note-card" key={(item.skill || 'partial') + index}>
                             <strong>{item.skill}</strong>
                             <p className="helper">{item.gap_detail}</p>
-                            <p className="helper">Priority: {item.priority} \u00B7 Learnability: {item.learnability}</p>
+                            <p className="helper">Priority: {item.priority} · Learnability: {item.learnability}</p>
                             <p className="helper">{item.action}</p>
                           </div>
                         ))}
                         {gaps.map((item, index) => (
                           <div className="note-card" key={(item.skill || 'gap') + index}>
                             <strong>{item.skill}</strong>
-                            <p className="helper">Priority: {item.priority} \u00B7 Learnability: {item.learnability}</p>
+                            <p className="helper">Priority: {item.priority} · Learnability: {item.learnability}</p>
                             <p className="helper">{item.action}</p>
                           </div>
                         ))}
@@ -377,7 +377,7 @@ export default function Home() {
             </div>
 
             {loadingHistory ? (
-              <p className="helper">Loading saved analyses\u2026</p>
+              <p className="helper">Loading saved analyses…</p>
             ) : recent.length ? (
               <div className="history-list">
                 {recent.map((item) => {
@@ -393,7 +393,7 @@ export default function Home() {
                     >
                       <div>
                         <strong>{item.job_title}</strong>
-                        <span>{typeof item.readiness_score === 'number' ? 'Readiness score ' + item.readiness_score : 'Saved analysis'} \u00B7 {formatDate(item.created_at)}</span>
+                        <span>{typeof item.readiness_score === 'number' ? 'Readiness score ' + item.readiness_score : 'Saved analysis'} · {formatDate(item.created_at)}</span>
                       </div>
                       <div className="history-meta">
                         <span className={'fit-pill ' + recentFit.className}>{recentFit.label}</span>
