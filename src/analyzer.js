@@ -58,10 +58,14 @@ async function analyzeSkills(jd, skills, fetchImpl) {
   }
 
   const data = await response.json();
-  const raw = data.choices[0].message.content;
+  const raw = data?.choices?.[0]?.message?.content;
+
+  if (typeof raw !== 'string' || raw.trim() === '') {
+    throw createStatusError('OpenRouter returned an unexpected response format.', 502);
+  }
+
   const normalized = raw
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
+    .replace(/^```(json)?\s*/i, '')
     .replace(/\s*```$/i, '')
     .trim();
 
