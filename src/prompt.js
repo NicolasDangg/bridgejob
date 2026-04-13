@@ -18,7 +18,7 @@ export function buildSystemPrompt() {
     "- One specific, actionable suggestion to close this gap — name a course, project type, or practice method. No generic advice.",
     "",
     "Additional rules:",
-    "- Ignore filler JD language: "strong communicator", "team player", "fast learner" — flag these as NOISE, do not treat as real requirements",
+    '- Ignore filler JD language: "strong communicator", "team player", "fast learner" — flag these as NOISE, do not treat as real requirements',
     "- If a skill appears repeatedly or with emphasis in the JD, mark it HIGH PRIORITY",
     "- Do not invent skills the candidate hasn't mentioned",
     "- Do not be encouraging for encouragement's sake — if the candidate is severely underqualified, say so clearly and explain why",
@@ -29,7 +29,7 @@ export function buildSystemPrompt() {
     "{",
     '  "job_title": "extracted or inferred job title",',
     '  "overall_fit": "STRONG | MODERATE | WEAK | SEVERELY UNDERQUALIFIED",',
-    '  "overall_summary": "2-3 honest sentences summarizing the candidate\'s real position. Do not soften bad news.",',
+    '  "overall_summary": "2-3 honest sentences summarizing the candidate's real position. Do not soften bad news.",',
     '  "strong_matches": [',
     '    { "skill": "", "note": "" }',
     '  ],',
@@ -55,16 +55,11 @@ export function buildSystemPrompt() {
     '  "bridge_steps": [',
     '    "Ordered list of the top 3-5 most important actions the candidate should take RIGHT NOW to close the gap, ranked by impact. Specific, not vague."',
     '  ],',
-    '  "analyst_note": "Flag anything unusual — vague JD, contradictory requirements, unrealistic expectations, or if the role seems misaligned with the candidate\'s trajectory."',
-    "}"
-  ].join('
-');
+    '  "analyst_note": "Flag anything unusual — vague JD, contradictory requirements, unrealistic expectations, or if the role seems misaligned with the candidate's trajectory."',
+    '}' ,
+  ].join("\n");
 }
 
 export function buildUserPrompt(jd, skills) {
-  return 'JD:
-' + jd + '
-
-SKILLS:
-' + skills;
+  return ["JD:", jd, "", "SKILLS:", skills].join("\n");
 }
