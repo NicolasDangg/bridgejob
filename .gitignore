@@ -1,2 +1,9 @@
 node_modules/
+.next/
+.vercel/
+out/
 .env
+
+tests/
+
+.github/

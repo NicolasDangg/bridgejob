@@ -1,29 +1,16 @@
 'use strict';
 
-// Mock the openai module before requiring the analyzer
-jest.mock('openai', () => {
-  const mockCreate = jest.fn();
-  return {
-    default: jest.fn().mockImplementation(() => ({
-      chat: {
-        completions: {
-          create: mockCreate,
-        },
-      },
-    })),
-    __mockCreate: mockCreate,
-  };
-});
-
-const openaiModule = require('openai');
 const { analyzeSkills } = require('../src/analyzer');
+let fetchSpy;
 
-const mockCreate = openaiModule.__mockCreate;
-
-/** Returns a minimal OpenAI chat completion response wrapping the given content. */
-function makeOpenAIResponse(content) {
+/** Returns a minimal fetch response wrapping OpenRouter-style chat output. */
+function makeFetchResponse(content, { ok = true, status = 200 } = {}) {
   return {
-    choices: [{ message: { content } }],
+    ok,
+    status,
+    json: jest.fn().mockResolvedValue({
+      choices: [{ message: { content } }],
+    }),
   };
 }
 
@@ -44,61 +31,97 @@ const VALID_ANALYSIS = {
 
 describe('analyzeSkills', () => {
   beforeEach(() => {
-    mockCreate.mockReset();
+    fetchSpy = jest.spyOn(global, 'fetch').mockReset();
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
   });
 
   test('returns parsed JSON from the AI response', async () => {
-    mockCreate.mockResolvedValue(makeOpenAIResponse(JSON.stringify(VALID_ANALYSIS)));
+    fetchSpy.mockResolvedValue(makeFetchResponse(JSON.stringify(VALID_ANALYSIS)));
 
     const result = await analyzeSkills('Backend role requiring Go.', 'HTML, CSS');
 
     expect(result).toEqual(VALID_ANALYSIS);
   });
 
-  test('calls the OpenAI API with system and user messages', async () => {
-    mockCreate.mockResolvedValue(makeOpenAIResponse(JSON.stringify(VALID_ANALYSIS)));
+  test('calls the OpenRouter API with system and user messages', async () => {
+    fetchSpy.mockResolvedValue(makeFetchResponse(JSON.stringify(VALID_ANALYSIS)));
 
     await analyzeSkills('Backend role requiring Go.', 'HTML, CSS');
 
-    expect(mockCreate).toHaveBeenCalledTimes(1);
-    const callArgs = mockCreate.mock.calls[0][0];
-    expect(callArgs.messages).toHaveLength(2);
-    expect(callArgs.messages[0].role).toBe('system');
-    expect(callArgs.messages[1].role).toBe('user');
-    expect(callArgs.messages[1].content).toContain('Backend role requiring Go.');
-    expect(callArgs.messages[1].content).toContain('HTML, CSS');
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://openrouter.ai/api/v1/chat/completions',
+      expect.any(Object),
+    );
+
+    const callOptions = fetchSpy.mock.calls[0][1];
+    expect(callOptions.method).toBe('POST');
+    expect(callOptions.headers).toMatchObject({
+      Authorization: expect.stringMatching(/^Bearer /),
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://bridgejob.app',
+      'X-Title': 'BridgeJob',
+    });
+
+    const body = JSON.parse(callOptions.body);
+    expect(body.messages).toHaveLength(2);
+    expect(body.messages[0].role).toBe('system');
+    expect(body.messages[1].role).toBe('user');
+    expect(body.messages[1].content).toContain('Backend role requiring Go.');
+    expect(body.messages[1].content).toContain('HTML, CSS');
   });
 
-  test('uses json_object response format', async () => {
-    mockCreate.mockResolvedValue(makeOpenAIResponse(JSON.stringify(VALID_ANALYSIS)));
+  test('uses the configured OpenRouter model', async () => {
+    fetchSpy.mockResolvedValue(makeFetchResponse(JSON.stringify(VALID_ANALYSIS)));
 
     await analyzeSkills('JD text', 'Skills text');
 
-    const callArgs = mockCreate.mock.calls[0][0];
-    expect(callArgs.response_format).toEqual({ type: 'json_object' });
+    const callOptions = fetchSpy.mock.calls[0][1];
+    const body = JSON.parse(callOptions.body);
+    expect(body.model).toBe('minimax/minimax-m2.5:free');
   });
 
   test('throws when the AI returns non-JSON content', async () => {
-    mockCreate.mockResolvedValue(makeOpenAIResponse('Sorry, I cannot help with that.'));
+    fetchSpy.mockResolvedValue(makeFetchResponse('Sorry, I cannot help with that.'));
 
-    await expect(analyzeSkills('JD text', 'Skills text')).rejects.toThrow(
-      /non-JSON response/i,
-    );
+    await expect(analyzeSkills('JD text', 'Skills text')).rejects.toMatchObject({
+      status: 422,
+      message: expect.stringMatching(/non-JSON response/i),
+    });
   });
 
-  test('accepts a custom client via dependency injection', async () => {
-    const customMockCreate = jest.fn().mockResolvedValue(
-      makeOpenAIResponse(JSON.stringify(VALID_ANALYSIS)),
+  test('accepts a custom fetch implementation via dependency injection', async () => {
+    const customFetch = jest.fn().mockResolvedValue(
+      makeFetchResponse(JSON.stringify(VALID_ANALYSIS)),
     );
-    const customClient = {
-      chat: { completions: { create: customMockCreate } },
-    };
 
-    const result = await analyzeSkills('JD text', 'Skills text', customClient);
+    const result = await analyzeSkills('JD text', 'Skills text', customFetch);
 
     expect(result).toEqual(VALID_ANALYSIS);
-    expect(customMockCreate).toHaveBeenCalledTimes(1);
-    // The default module-level client should NOT have been called
-    expect(mockCreate).not.toHaveBeenCalled();
+    expect(customFetch).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test('propagates OpenRouter status when upstream returns non-ok response', async () => {
+    fetchSpy.mockResolvedValue(makeFetchResponse('{}', { ok: false, status: 429 }));
+
+    await expect(analyzeSkills('JD text', 'Skills text')).rejects.toMatchObject({
+      status: 429,
+      message: expect.stringMatching(/status 429/i),
+    });
+  });
+
+  test('parses markdown-fenced JSON responses', async () => {
+    fetchSpy.mockResolvedValue(
+      makeFetchResponse(`\`\`\`json
+${JSON.stringify(VALID_ANALYSIS)}
+\`\`\``),
+    );
+
+    const result = await analyzeSkills('JD text', 'Skills text');
+    expect(result).toEqual(VALID_ANALYSIS);
   });
 });

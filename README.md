@@ -1,128 +1,72 @@
 # BridgeJob
 
-BridgeJob's AI career analyst helps candidates understand exactly where they stand before applying for a role — no fluff, no false encouragement.
+BridgeJob helps candidates see where they stand before they apply.
 
-## What it does
+This branch keeps the OpenRouter-backed analysis logic from the migrate PR and adds a new Next.js frontend shell with a calm, professional, minimalist, light-themed, cozy UI.
 
-Given a **job description (JD)** and a **candidate's skills/experience**, the API:
+## Stack
 
-- Extracts all required and preferred skills from the JD
-- Compares them against the candidate's stated skills
-- Classifies each skill as `STRONG MATCH`, `PARTIAL MATCH`, `GAP`, or `UNCLEAR`
-- Provides priority levels, learnability estimates, and specific actions for every gap
-- Ignores noise language ("team player", "fast learner", etc.)
-- Returns an honest readiness score (0–100) and ranked bridge steps
+- Next.js App Router for the frontend shell
+- OpenRouter for the analysis backend logic
+- Supabase for saved analysis history
+- Vercel for deployment and preview builds
 
-## Quick start
+## Local setup
 
-### 1. Install dependencies
+1. Install dependencies.
 
-```bash
-npm install
-```
+   npm install
 
-### 2. Configure environment
+2. Copy the example environment file.
 
-```bash
-cp .env.example .env
-# Edit .env and set your OPENAI_API_KEY
-```
+   cp .env.example .env.local
 
-### 3. Start the server
+3. Set the required environment variables.
 
-```bash
-npm start
-```
+   OPENROUTER_API_KEY=...
+   NEXT_PUBLIC_SUPABASE_URL=...
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
-The API listens on `http://localhost:3000` by default (override with `PORT` env var).
+4. Start the app.
 
-## API
+   npm run dev
 
-### `POST /analyze`
+## Vercel deployment
 
-**Request body** (JSON):
+- Connect the migrate branch to Vercel.
+- Keep the default Next.js build command.
+- Add the same environment variables in Vercel project settings.
+- Every PR preview can point at the same Supabase project.
 
-| Field    | Type   | Required | Description                                    |
-|----------|--------|----------|------------------------------------------------|
-| `jd`     | string | ✅        | Full text of the job description               |
-| `skills` | string | ✅        | Candidate's current skills and experience      |
+## Supabase schema
 
-**Example request:**
+Create a table named analyses:
 
-```bash
-curl -X POST http://localhost:3000/analyze \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jd": "We are looking for a Senior Frontend Engineer with 5+ years of React experience...",
-    "skills": "3 years of JavaScript, basic React, some Vue.js experience"
-  }'
-```
+   create table if not exists analyses (
+     id uuid default gen_random_uuid() primary key,
+     job_title text not null,
+     overall_fit text not null,
+     overall_summary text not null,
+     readiness_score integer,
+     job_description text not null,
+     candidate_skills text not null,
+     analysis jsonb not null,
+     created_at timestamptz default now()
+   );
 
-**Example response:**
+Optional policies:
 
-```json
-{
-  "job_title": "Senior Frontend Engineer",
-  "overall_fit": "WEAK",
-  "overall_summary": "The candidate has foundational JavaScript skills but falls significantly short of the seniority and React depth this role demands. Without dedicated upskilling, this application is unlikely to progress.",
-  "strong_matches": [
-    { "skill": "JavaScript", "note": "Candidate lists JS as their primary language." }
-  ],
-  "partial_matches": [
-    {
-      "skill": "React",
-      "gap_detail": "Candidate has basic React but the JD emphasizes advanced patterns (hooks, context, performance optimization).",
-      "priority": "CRITICAL",
-      "learnability": "MEDIUM",
-      "action": "Complete the Scrimba Advanced React course and ship a full CRUD app using hooks and context API to GitHub."
-    }
-  ],
-  "gaps": [
-    {
-      "skill": "TypeScript",
-      "priority": "CRITICAL",
-      "learnability": "MEDIUM",
-      "action": "Work through Matt Pocock's Total TypeScript Beginners course, then refactor your largest JS project to TS."
-    }
-  ],
-  "noise_skills": ["team player", "strong communicator"],
-  "readiness_score": 28,
-  "bridge_steps": [
-    "Finish Scrimba Advanced React and ship a hooks/context project within 3 weeks.",
-    "Complete Total TypeScript Beginners and add TS to an existing project.",
-    "Build a production-grade React app (auth, routing, API calls) and document it."
-  ],
-  "analyst_note": "React is mentioned four times in the JD — treat it as the absolute dealbreaker requirement."
-}
-}
-```
+- allow authenticated inserts if you want to save from a logged-in app
+- allow public reads if you want the history panel visible without login
 
-**Error responses:**
+## What changed in this branch
 
-| Status | Meaning                                              |
-|--------|------------------------------------------------------|
-| 400    | Missing or empty `jd` or `skills` field              |
-| 502    | OpenAI API call failed or returned unparseable output |
+- Preserves the migrated OpenRouter analysis logic
+- Adds a new App Router frontend
+- Adds a Supabase browser client helper
+- Adds a Next.js API route that reuses the existing analyzer
+- Updates the UI to a softer editorial light theme
 
-## Project structure
+## Files that still contain the legacy Express app
 
-```
-bridgejob/
-├── index.js          # Entry point — starts the HTTP server
-├── src/
-│   ├── app.js        # Express app and route definitions
-│   ├── analyzer.js   # OpenAI integration and skill analysis logic
-│   └── prompt.js     # System and user prompt builders
-├── tests/
-│   ├── app.test.js       # Route-level tests (supertest)
-│   ├── analyzer.test.js  # Analyzer unit tests (mocked OpenAI)
-│   └── prompt.test.js    # Prompt builder unit tests
-├── .env.example      # Environment variable template
-└── package.json
-```
-
-## Running tests
-
-```bash
-npm test
-```
+The old Express files are still in the repository for reference and test coverage, but the Vercel app uses the Next.js route and frontend shell.
