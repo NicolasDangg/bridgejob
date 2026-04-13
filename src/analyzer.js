@@ -1,50 +1,78 @@
 'use strict';
 
-const OpenAI = require('openai').default;
 const { buildSystemPrompt, buildUserPrompt } = require('./prompt');
 
 /**
- * Creates an OpenAI client instance.
- * Exported separately to allow easy mocking in tests.
+ * Creates an error with an HTTP-like status code.
  *
- * @returns {OpenAI} OpenAI client.
+ * @param {string} message - Error message.
+ * @param {number} status - Error status code.
+ * @returns {Error} Error with status attached.
  */
-function createClient() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function createStatusError(message, status) {
+  const err = new Error(message);
+  err.status = status;
+  return err;
 }
 
 /**
- * Analyzes a job description against a candidate's skills using the OpenAI API.
+ * Analyzes a job description against a candidate's skills using the OpenRouter API.
  *
  * @param {string} jd - The full text of the job description.
  * @param {string} skills - The candidate's current skills and experience.
- * @param {OpenAI} [client] - Optional OpenAI client (used for testing/injection).
+ * @param {Function} [fetchImpl] - Optional fetch implementation (used for testing/injection).
  * @returns {Promise<object>} Parsed JSON analysis result.
- * @throws {Error} If the API response cannot be parsed as valid JSON.
+ * @throws {Error} With status=502 for upstream request failures.
+ * @throws {Error} With status=422 for non-JSON model responses.
  */
-async function analyzeSkills(jd, skills, client) {
-  const openai = client || createClient();
+async function analyzeSkills(jd, skills, fetchImpl) {
+  const fetchFn = fetchImpl || global.fetch;
+  let response;
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      { role: 'system', content: buildSystemPrompt() },
-      { role: 'user', content: buildUserPrompt(jd, skills) },
-    ],
-    temperature: 0.2,
-    response_format: { type: 'json_object' },
-  });
+  try {
+    response = await fetchFn('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://bridgejob.app',
+        'X-Title': 'BridgeJob',
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-3.3-70b-instruct:free',
+        messages: [
+          { role: 'system', content: buildSystemPrompt() },
+          { role: 'user', content: buildUserPrompt(jd, skills) },
+        ],
+      }),
+    });
+  } catch (err) {
+    throw createStatusError(`OpenRouter request failed: ${err.message}`, 502);
+  }
 
-  const raw = response.choices[0].message.content;
+  if (!response || !response.ok) {
+    throw createStatusError(
+      `OpenRouter request failed with status ${response ? response.status : 'unknown'}.`,
+      502,
+    );
+  }
+
+  const data = await response.json();
+  const raw = data.choices[0].message.content;
+  const normalized = raw
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
 
   let result;
   try {
-    result = JSON.parse(raw);
+    result = JSON.parse(normalized);
   } catch {
-    throw new Error(`AI returned non-JSON response: ${raw}`);
+    throw createStatusError(`AI returned non-JSON response: ${raw}`, 422);
   }
 
   return result;
 }
 
-module.exports = { analyzeSkills, createClient };
+module.exports = { analyzeSkills };

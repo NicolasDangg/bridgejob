@@ -5,6 +5,10 @@ const { analyzeSkills } = require('./analyzer');
 
 const app = express();
 app.use(express.json());
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  next();
+});
 
 /**
  * POST /analyze
@@ -23,6 +27,14 @@ app.post('/analyze', async (req, res) => {
 
   if (!skills || typeof skills !== 'string' || skills.trim() === '') {
     return res.status(400).json({ error: '`skills` is required and must be a non-empty string.' });
+  }
+
+  if (jd.trim().length < 50) {
+    return res.status(400).json({ error: '`jd` must be at least 50 characters long.' });
+  }
+
+  if (skills.trim().length < 20) {
+    return res.status(400).json({ error: '`skills` must be at least 20 characters long.' });
   }
 
   try {

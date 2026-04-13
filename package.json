@@ -9,7 +9,9 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "testMatch": ["**/tests/**/*.test.js"]
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
   },
   "repository": {
     "type": "git",
@@ -25,8 +27,7 @@
   "homepage": "https://github.com/NicolasDangg/bridgejob#readme",
   "dependencies": {
     "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "openai": "^6.34.0"
+    "express": "^5.2.1"
   },
   "devDependencies": {
     "jest": "^30.3.0",
