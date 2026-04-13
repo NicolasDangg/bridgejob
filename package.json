@@ -1,7 +1,7 @@
 {
   "name": "bridgejob",
   "version": "1.0.0",
-  "description": "BridgeJob helps candidates see where they stand before they apply.",
+  "description": "BridgeJob helps candidates understand exactly where they stand before applying.",
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
@@ -22,7 +22,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/NicolasDangg/bridgejob/issues"
   },
