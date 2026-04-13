@@ -1,0 +1,32 @@
+{
+  "job_title": "",
+  "overall_fit": "STRONG | MODERATE | WEAK | SEVERELY UNDERQUALIFIED",
+  "overall_summary": "",
+  "strong_matches": [
+    {
+      "skill": "",
+      "note": ""
+    }
+  ],
+  "partial_matches": [
+    {
+      "skill": "",
+      "gap_detail": "",
+      "priority": "CRITICAL | IMPORTANT | NICE TO HAVE",
+      "learnability": "FAST | MEDIUM | SLOW",
+      "action": ""
+    }
+  ],
+  "gaps": [
+    {
+      "skill": "",
+      "priority": "CRITICAL | IMPORTANT | NICE TO HAVE",
+      "learnability": "FAST | MEDIUM | SLOW",
+      "action": ""
+    }
+  ],
+  "noise_skills": [""],
+  "readiness_score": 0,
+  "bridge_steps": [""],
+  "analyst_note": ""
+}

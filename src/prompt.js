@@ -1,9 +1,8 @@
-'use strict';
+import schema from './schema.json';
 
-/**
- * Builds the system prompt for the BridgeJob AI career analyst.
- */
-function buildSystemPrompt() {
+const schemaText = JSON.stringify(schema, null, 2);
+
+export function buildSystemPrompt() {
   return `You are BridgeJob's AI career analyst.
 BridgeJob helps candidates understand exactly where they stand before applying for a role — no fluff, no false encouragement.
 
@@ -28,54 +27,11 @@ Additional rules:
 - Do not be encouraging for encouragement's sake — if the candidate is severely underqualified, say so clearly and explain why
 - If the JD is too vague to extract meaningful requirements, say so and list what little you could extract
 
-Return ONLY a valid JSON object in this exact structure. No extra text, no markdown, no explanation outside the JSON:
+Return ONLY a valid JSON object matching this schema exactly:
 
-{
-  "job_title": "extracted or inferred job title",
-  "overall_fit": "STRONG | MODERATE | WEAK | SEVERELY UNDERQUALIFIED",
-  "overall_summary": "2-3 honest sentences summarizing the candidate's real position. Do not soften bad news.",
-  "strong_matches": [
-    { "skill": "", "note": "" }
-  ],
-  "partial_matches": [
-    {
-      "skill": "",
-      "gap_detail": "",
-      "priority": "CRITICAL | IMPORTANT | NICE TO HAVE",
-      "learnability": "FAST | MEDIUM | SLOW",
-      "action": ""
-    }
-  ],
-  "gaps": [
-    {
-      "skill": "",
-      "priority": "CRITICAL | IMPORTANT | NICE TO HAVE",
-      "learnability": "FAST | MEDIUM | SLOW",
-      "action": ""
-    }
-  ],
-  "noise_skills": [""],
-  "readiness_score": 0,
-  "bridge_steps": [
-    "Ordered list of the top 3-5 most important actions the candidate should take RIGHT NOW to close the gap, ranked by impact. Specific, not vague."
-  ],
-  "analyst_note": "Flag anything unusual — vague JD, contradictory requirements, unrealistic expectations, or if the role seems misaligned with the candidate's trajectory."
-}`;
+${schemaText}`;
 }
 
-/**
- * Builds the user prompt with the provided JD and SKILLS.
- *
- * @param {string} jd - The job description text.
- * @param {string} skills - The candidate's skills and experience.
- * @returns {string} The formatted user prompt.
- */
-function buildUserPrompt(jd, skills) {
-  return `JD:
-${jd}
-
-SKILLS:
-${skills}`;
+export function buildUserPrompt(jd, skills) {
+  return `JD:\n${jd}\n\nSKILLS:\n${skills}`;
 }
-
-module.exports = { buildSystemPrompt, buildUserPrompt };
