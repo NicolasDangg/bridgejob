@@ -1,6 +1,10 @@
 'use strict';
 
-require('dotenv').config();
+try {
+  require('dotenv').config();
+} catch {
+  // Allow startup without dotenv when env vars are provided by the host.
+}
 
 const app = require('./src/app');
 

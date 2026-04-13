@@ -25,7 +25,7 @@ npm install
 
 ```bash
 cp .env.example .env
-# Edit .env and set your OPENAI_API_KEY
+# Edit .env and set your OPENROUTER_API_KEY
 ```
 
 ### 3. Start the server
@@ -102,7 +102,7 @@ curl -X POST http://localhost:3000/analyze \
 | Status | Meaning                                              |
 |--------|------------------------------------------------------|
 | 400    | Missing or empty `jd` or `skills` field              |
-| 502    | OpenAI API call failed or returned unparseable output |
+| 502    | OpenRouter API call failed or returned unparseable output |
 
 ## Project structure
 
@@ -111,11 +111,11 @@ bridgejob/
 ├── index.js          # Entry point — starts the HTTP server
 ├── src/
 │   ├── app.js        # Express app and route definitions
-│   ├── analyzer.js   # OpenAI integration and skill analysis logic
+│   ├── analyzer.js   # OpenRouter integration and skill analysis logic
 │   └── prompt.js     # System and user prompt builders
 ├── tests/
 │   ├── app.test.js       # Route-level tests (supertest)
-│   ├── analyzer.test.js  # Analyzer unit tests (mocked OpenAI)
+│   ├── analyzer.test.js  # Analyzer unit tests (mocked OpenRouter)
 │   └── prompt.test.js    # Prompt builder unit tests
 ├── .env.example      # Environment variable template
 └── package.json

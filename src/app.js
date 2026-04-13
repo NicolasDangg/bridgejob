@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('path');
 const express = require('express');
 const { analyzeSkills } = require('./analyzer');
 
@@ -16,6 +17,11 @@ app.use((req, res, next) => {
     return res.sendStatus(204);
   }
   next();
+});
+
+// Serve the single-file frontend from the project root.
+app.get('/', (_req, res) => {
+  res.sendFile(path.resolve(__dirname, '..', 'index.html'));
 });
 
 /**
@@ -54,7 +60,8 @@ app.post('/analyze', async (req, res) => {
     return res.json(result);
   } catch (err) {
     console.error('Analysis error:', err);
-    return res.status(502).json({ error: 'Failed to analyze skills.', detail: err.message });
+    const status = Number.isInteger(err?.status) ? err.status : 502;
+    return res.status(status).json({ error: 'Failed to analyze skills.', detail: err.message });
   }
 });
 

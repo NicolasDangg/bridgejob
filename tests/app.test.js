@@ -3,7 +3,7 @@
 const request = require('supertest');
 const app = require('../src/app');
 
-// Mock the analyzer module so tests don't call the real OpenAI API
+// Mock the analyzer module so tests don't call the real OpenRouter API
 jest.mock('../src/analyzer', () => ({
   analyzeSkills: jest.fn(),
 }));
@@ -46,6 +46,14 @@ const MOCK_ANALYSIS = {
 describe('POST /analyze', () => {
   beforeEach(() => {
     analyzeSkills.mockReset();
+  });
+
+  test('serves frontend HTML on GET /', async () => {
+    const res = await request(app).get('/');
+
+    expect(res.status).toBe(200);
+    expect(res.type).toMatch(/html/i);
+    expect(res.text).toMatch(/BridgeJob/);
   });
 
   test('returns 400 when `jd` is missing', async () => {
@@ -117,16 +125,18 @@ describe('POST /analyze', () => {
     );
   });
 
-  test('returns 502 when analyzeSkills throws', async () => {
-    analyzeSkills.mockRejectedValue(new Error('OpenAI timeout'));
+  test('returns analyzer-provided status when analyzeSkills throws with status', async () => {
+    const err = new Error('OpenRouter rate limited');
+    err.status = 429;
+    analyzeSkills.mockRejectedValue(err);
 
     const res = await request(app)
       .post('/analyze')
       .send({ jd: 'We need a React developer.', skills: 'JavaScript' });
 
-    expect(res.status).toBe(502);
+    expect(res.status).toBe(429);
     expect(res.body.error).toBeDefined();
-    expect(res.body.detail).toBe('OpenAI timeout');
+    expect(res.body.detail).toBe('OpenRouter rate limited');
   });
 
   test('readiness_score is a number between 0 and 100', async () => {

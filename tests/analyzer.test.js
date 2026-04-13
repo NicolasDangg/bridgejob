@@ -81,7 +81,7 @@ describe('analyzeSkills', () => {
 
     const callOptions = fetchSpy.mock.calls[0][1];
     const body = JSON.parse(callOptions.body);
-    expect(body.model).toBe('meta-llama/llama-3.3-70b-instruct:free');
+    expect(body.model).toBe('minimax/minimax-m2.5:free');
   });
 
   test('throws when the AI returns non-JSON content', async () => {
@@ -105,11 +105,11 @@ describe('analyzeSkills', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  test('throws 502 when OpenRouter returns a non-ok response', async () => {
+  test('propagates OpenRouter status when upstream returns non-ok response', async () => {
     fetchSpy.mockResolvedValue(makeFetchResponse('{}', { ok: false, status: 429 }));
 
     await expect(analyzeSkills('JD text', 'Skills text')).rejects.toMatchObject({
-      status: 502,
+      status: 429,
       message: expect.stringMatching(/status 429/i),
     });
   });
