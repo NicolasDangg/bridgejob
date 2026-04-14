@@ -4,14 +4,14 @@ type MatchItem = {
   skill: string;
   note?: string;
   gap_detail?: string;
-  priority?: 'CRITICAL' | 'IMPORTANT' | 'OPTIONAL';
-  learnability?: 'FAST' | 'MEDIUM' | 'SLOW';
+  priority?: string;
+  learnability?: string;
   action?: string;
 };
 
 type FitResponse = {
   job_title: string;
-  overall_fit: 'STRONG' | 'MODERATE' | 'LOW';
+  overall_fit: 'STRONG' | 'MODERATE' | 'WEAK' | 'SEVERELY_UNDERQUALIFIED';
   overall_summary: string;
   strong_matches: MatchItem[];
   partial_matches: MatchItem[];
@@ -20,6 +20,14 @@ type FitResponse = {
   bridge_steps: string[];
   analyst_note: string;
 };
+
+const READINESS_BANDS = [
+  { label: 'Mismatch', start: 0, end: 20, color: '#ef4444' },
+  { label: 'Stretch', start: 20, end: 40, color: '#f59e0b' },
+  { label: 'Workable', start: 40, end: 60, color: '#22c55e' },
+  { label: 'Strong', start: 60, end: 80, color: '#38bdf8' },
+  { label: 'Ready', start: 80, end: 100, color: '#6366f1' },
+];
 
 const mockAiResponse: FitResponse = {
   job_title: 'Senior operations associate for a fast-growing hiring platform',
@@ -38,31 +46,28 @@ const mockAiResponse: FitResponse = {
       gap_detail: 'Limited experience with SQL queries and no mention of more complex queries.',
       priority: 'IMPORTANT',
       learnability: 'FAST',
-      action: 'Complete a course on SQL fundamentals, such as DataCamp\'s "Intro to SQL".',
+      action: 'Complete a course on SQL fundamentals, such as DataCamp's "Intro to SQL".',
     },
     {
       skill: 'Spreadsheets (data tracking and visualization)',
       gap_detail: 'Limited experience with dashboard building and no mention of data visualization tools.',
       priority: 'IMPORTANT',
       learnability: 'FAST',
-      action:
-        'Practice building more complex dashboards in Google Sheets or Excel using templates from platforms like Tableau or Power BI.',
+      action: 'Practice building more complex dashboards in Google Sheets or Excel using templates from platforms like Tableau or Power BI.',
     },
     {
       skill: 'Communication and coordination',
       gap_detail: 'Mentions of communication with teachers and classmates are limited to academic setting.',
       priority: 'CRITICAL',
       learnability: 'MEDIUM',
-      action:
-        'Practice coordinating with multiple stakeholders and taking on customer-facing roles, such as in online communities or freelance writing.',
+      action: 'Practice coordinating with multiple stakeholders and taking on customer-facing roles, such as in online communities or freelance writing.',
     },
     {
       skill: 'Familiarity with ATS tools and reporting',
       gap_detail: 'No experience with ATS tools and only mentions basic SQL.',
-      priority: 'CRITICAL',
+      priority: 'NICE TO HAVE',
       learnability: 'MEDIUM',
-      action:
-        'Familiarize yourself with popular ATS tools like Workday or BambooHR by watching tutorials or attending webinars, and practice generating reports using basic SQL queries.',
+      action: 'Familiarize yourself with popular ATS tools like Workday or BambooHR by watching tutorials or attending webinars, and practice generating reports using basic SQL queries.',
     },
   ],
   noise_skills: ['Strong communication, attention to detail, and comfort with spreadsheets'],
@@ -78,14 +83,22 @@ const mockAiResponse: FitResponse = {
 const fitToneMap: Record<FitResponse['overall_fit'], string> = {
   STRONG: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40',
   MODERATE: 'bg-amber-500/20 text-amber-300 border-amber-400/40',
-  LOW: 'bg-red-500/20 text-red-300 border-red-400/40',
+  WEAK: 'bg-red-500/20 text-red-300 border-red-400/40',
+  SEVERELY_UNDERQUALIFIED: 'bg-red-500/20 text-red-300 border-red-400/40',
 };
 
-const priorityToneMap: Record<NonNullable<MatchItem['priority']>, string> = {
-  CRITICAL: 'bg-red-500/20 text-red-300 border-red-400/40',
-  IMPORTANT: 'bg-amber-500/20 text-amber-300 border-amber-400/40',
-  OPTIONAL: 'bg-blue-500/20 text-blue-300 border-blue-400/40',
+const priorityToneMap: Record<string, string> = {
+  CRITICAL: 'priority-chip--critical',
+  IMPORTANT: 'priority-chip--important',
+  NICE_TO_HAVE: 'priority-chip--nice',
 };
+
+function normalizePriority(value?: string) {
+  const normalized = String(value || '').toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+  if (normalized === 'NICE_TO_HAVE' || normalized === 'NICE_TOHAVE') return 'NICE_TO_HAVE';
+  if (normalized === 'CRITICAL') return 'CRITICAL';
+  return 'IMPORTANT';
+}
 
 export default function SampleResult() {
   const jdText =
@@ -107,105 +120,113 @@ export default function SampleResult() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-center gap-6 lg:gap-8 xl:gap-10 px-3 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[460px] min-h-[530px] mx-auto lg:mx-0 p-8 bg-white/[0.08] backdrop-blur-md rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.25)] lg:self-center">
-        <h2 className="text-2xl font-serif font-bold text-white mb-2">Try The Fit Analyzer</h2>
-        <p className="text-white/70 text-sm mb-6">
-          Enter a job description and candidate experience. This preview uses your provided JSON as the AI response.
-        </p>
+    <div className="sample-result-layout">
+      <div className="sample-panel sample-panel--input">
+        <h2 className="sample-heading">Try The Fit Analyzer</h2>
+        <p className="sample-lede">Enter a job description and candidate experience. This preview uses the sample JSON response so the UI stays populated.</p>
 
-        <div className="h-[calc(100%-6rem)] flex flex-col justify-between">
-          <div className="space-y-4">
-          <label className="block">
-            <span className="block text-xs uppercase tracking-[0.2em] font-semibold text-white/60 mb-2">Job Description</span>
-            <textarea
-              value={jdText}
-              readOnly
-              className="w-full h-24 rounded-2xl bg-black/20 text-white/90 placeholder:text-white/40 p-4 text-sm leading-relaxed resize-none focus:outline-none"
-              placeholder="Paste the JD here"
-            />
+        <div className="sample-inputs">
+          <label className="sample-field">
+            <span className="sample-field__label">Job Description</span>
+            <textarea value={jdText} readOnly placeholder="Paste the JD here" />
           </label>
 
-          <label className="block">
-            <span className="block text-xs uppercase tracking-[0.2em] font-semibold text-white/60 mb-2">Candidate Experience</span>
-            <textarea
-              value={candidateText}
-              readOnly
-              className="w-full h-24 rounded-2xl bg-black/20 text-white/90 placeholder:text-white/40 p-4 text-sm leading-relaxed resize-none focus:outline-none"
-              placeholder="Paste resume or experience summary"
-            />
+          <label className="sample-field">
+            <span className="sample-field__label">Candidate Experience</span>
+            <textarea value={candidateText} readOnly placeholder="Paste resume or experience summary" />
           </label>
-          </div>
-
-          <button
-            type="button"
-            onClick={runSampleAnalysis}
-            disabled
-            className="mt-auto w-full sm:w-auto px-6 py-3 bg-white/70 text-zinc-900 rounded-full font-semibold cursor-not-allowed"
-          >
-            Login/Signup to Run Analysis
-          </button>
         </div>
+
+        <button type="button" onClick={runSampleAnalysis} className="sample-button">
+          Login/Signup to Run Analysis
+        </button>
       </div>
 
-      <div className="w-full lg:flex-1 lg:max-w-[960px]">
+      <div className="sample-panel sample-panel--output">
         {response ? (
-          <div className="space-y-4 lg:space-y-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="sample-output-stack">
+            <div className="sample-output-head">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-white/60 font-semibold">Fit Summary</p>
-                <h3 className="text-3xl lg:text-4xl font-serif font-bold text-white mt-1 leading-tight">{response.job_title}</h3>
+                <p className="sample-kicker">Fit Summary</p>
+                <h3>{response.job_title}</h3>
               </div>
-              <div className="flex gap-2">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${fitToneMap[response.overall_fit]}`}>
-                  {response.overall_fit} FIT
-                </span>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${readinessTone}`}>
-                  {response.readiness_score}% READY
-                </span>
+              <div className="sample-pill-row">
+                <span className={'sample-pill ' + fitToneMap[response.overall_fit]}>{response.overall_fit} FIT</span>
+                <span className={'sample-pill ' + readinessTone}>{response.readiness_score}% READY</span>
               </div>
             </div>
 
-            <p className="text-white/75 text-sm leading-relaxed">{response.overall_summary}</p>
+            <div className="note-card analyst-note-card">
+              <strong>Analyst note</strong>
+              <p className="helper">{response.analyst_note}</p>
+            </div>
 
-            <div className="rounded-3xl bg-white/[0.07] backdrop-blur-sm border border-white/15 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
-              <p className="text-xs uppercase tracking-[0.15em] text-white/60 font-semibold mb-2">Strong Match</p>
+            <div className="readiness-card">
+              <div className="readiness-card__head">
+                <div>
+                  <p className="panel-kicker">Readiness score</p>
+                  <strong>{response.readiness_score}</strong>
+                </div>
+                <span className="meta-label">Apple Weather style bar</span>
+              </div>
+              <div className="readiness-bar" aria-label={'Readiness score ' + response.readiness_score + ' out of 100'}>
+                {READINESS_BANDS.map((band) => {
+                  const width = band.end - band.start;
+                  return <div key={band.label} className="readiness-band" style={{ width: width + '%', backgroundColor: band.color }} title={band.label} />;
+                })}
+                <span className="readiness-marker" style={{ left: response.readiness_score + '%' }} />
+              </div>
+              <div className="readiness-labels">
+                {READINESS_BANDS.map((band) => <span key={band.label}>{band.label}</span>)}
+              </div>
+            </div>
+
+            <p className="sample-summary">{response.overall_summary}</p>
+
+            <div className="metric-row sample-metric-row">
+              <div className="metric"><span>Strong matches</span><strong>{response.strong_matches.length}</strong></div>
+              <div className="metric"><span>Priority gaps</span><strong>{response.partial_matches.length}</strong></div>
+              <div className="metric"><span>Readiness</span><strong>{response.readiness_score}%</strong></div>
+            </div>
+
+            <div className="sample-section-card">
+              <p className="sample-section-label">Strong Match</p>
               {response.strong_matches.map((match, index) => (
-                <div key={index} className="text-sm text-white/85">
-                  <p className="font-semibold text-white">{match.skill}</p>
-                  {match.note ? <p className="text-white/65 mt-1">{match.note}</p> : null}
+                <div key={index} className="sample-strong-match">
+                  <p className="sample-strong-match__title">{match.skill}</p>
+                  {match.note ? <p className="helper">{match.note}</p> : null}
                 </div>
               ))}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
-              {response.partial_matches.map((match, index) => (
-                <div key={index} className="rounded-3xl bg-white/[0.07] backdrop-blur-sm border border-white/15 p-4 h-[clamp(240px,31vh,340px)] shadow-[0_10px_30px_rgba(0,0,0,0.14)] flex flex-col overflow-y-auto pr-2 [scrollbar-gutter:stable] card-scroll">
-                  <p className="font-semibold text-white text-sm leading-snug">{match.skill}</p>
-                  {match.priority ? (
-                    <span className={`mt-2 mb-2 self-start text-[11px] font-bold uppercase px-2 py-1 rounded border ${priorityToneMap[match.priority]}`}>
-                      {match.priority}
-                    </span>
-                  ) : null}
-                  {match.gap_detail ? <p className="text-white/70 text-xs mb-2">{match.gap_detail}</p> : null}
-                  {match.action ? <p className="text-white/80 text-xs">Action: {match.action}</p> : null}
-                </div>
-              ))}
+            <div className="sample-gap-list">
+              {response.partial_matches.map((match, index) => {
+                const priority = normalizePriority(match.priority);
+                return (
+                  <div key={index} className="sample-gap-card">
+                    <div className="sample-gap-head">
+                      <p className="sample-gap-title">{match.skill}</p>
+                      <span className={'priority-chip ' + priorityToneMap[priority]}>{priority.replace(/_/g, ' ')}</span>
+                    </div>
+                    {match.gap_detail ? <p className="helper">{match.gap_detail}</p> : null}
+                    {match.action ? <p className="helper">Action: {match.action}</p> : null}
+                    {match.learnability ? <p className="helper">Learnability: {match.learnability}</p> : null}
+                  </div>
+                );
+              })}
             </div>
 
-            <div className="rounded-3xl bg-white/[0.07] backdrop-blur-sm border border-white/15 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
-              <p className="text-xs uppercase tracking-[0.15em] text-white/60 font-semibold mb-2">Bridge Steps</p>
-              <ul className="space-y-2 text-xs text-white/80">
+            <div className="sample-section-card">
+              <p className="sample-section-label">Bridge Steps</p>
+              <ul className="list sample-list">
                 {response.bridge_steps.map((step, index) => (
-                  <li key={index} className="leading-relaxed">{step}</li>
+                  <li key={index}>{step}</li>
                 ))}
               </ul>
             </div>
           </div>
         ) : (
-          <div className="h-full min-h-52 flex items-center justify-center text-white/50 text-sm">
-            Run analysis to see the fit summary.
-          </div>
+          <div className="sample-empty">Run analysis to see the fit summary.</div>
         )}
       </div>
     </div>
