@@ -253,6 +253,8 @@ export default function Home() {
             <Link className="badge nav-link" href="/login">Login</Link>
             <Link className="badge nav-link" href="/signup">Sign up</Link>
           </div>
+        </header>
+
         {showOnboarding ? (
           <div className="onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
             <button className="onboarding-backdrop" type="button" aria-label="Dismiss onboarding" onClick={() => setShowOnboarding(false)} />
