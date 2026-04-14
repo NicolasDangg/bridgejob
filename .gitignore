@@ -6,5 +6,8 @@ out/
 
 tests/
 
+# Temporary AI response fixtures generated during development
+tests/ai-responses/
+
 .github/
 package-lock.json

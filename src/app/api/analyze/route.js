@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { analyzeSkills } from '../../../analyzer.js';
+import { saveAIResponse } from '../../../lib/saveResponse.js';
 
 export const runtime = 'nodejs';
 
@@ -29,6 +30,13 @@ export async function POST(request) {
 
   try {
     const result = await analyzeSkills(jd, skills);
+    if (body?.save) {
+      try {
+        await saveAIResponse(result);
+      } catch (err) {
+        console.error('Failed to save AI response', err);
+      }
+    }
     return NextResponse.json(result);
   } catch (err) {
     const status = err && typeof err.status === "number" ? err.status : 502;

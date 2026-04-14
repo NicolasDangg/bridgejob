@@ -14,6 +14,7 @@ Your task:
   * PARTIAL MATCH: Candidate has something related but not exact
   * GAP: Candidate does not have this
   * UNCLEAR: JD is vague or candidate's description is ambiguous
+- DO NOT INCLUDE COMMENTS
 
 For every GAP and PARTIAL MATCH, provide:
 - Priority level: CRITICAL (likely dealbreaker), IMPORTANT (weakens application), NICE TO HAVE
