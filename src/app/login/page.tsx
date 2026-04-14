@@ -11,7 +11,14 @@ export default function LoginPage() {
               <h2>Sign in to BridgeJob</h2>
             </div>
           </div>
-          <button className="button" type="button">Sign in</button>
+
+          <div className="grid gap-3">
+            <div className="rounded-2xl border border-[var(--border)] bg-white/70 p-4 text-sm text-[var(--muted)]">
+              Keep your saved analyses, bridge steps, and readiness history in one place.
+            </div>
+            <button className="button" type="button">Sign in</button>
+          </div>
+
           <p className="helper" style={{ marginTop: '14px' }}>
             New here? <Link href="/signup">Create an account</Link>.
           </p>
