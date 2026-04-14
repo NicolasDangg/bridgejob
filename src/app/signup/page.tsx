@@ -11,7 +11,14 @@ export default function SignupPage() {
               <h2>Create your BridgeJob account</h2>
             </div>
           </div>
-          <button className="button" type="button">Create account</button>
+
+          <div className="grid gap-3">
+            <div className="rounded-2xl border border-[var(--border)] bg-white/70 p-4 text-sm text-[var(--muted)]">
+              Start with the sample analyzer, then move into saved history and team-ready workflows when you are ready.
+            </div>
+            <button className="button" type="button">Create account</button>
+          </div>
+
           <p className="helper" style={{ marginTop: '14px' }}>
             Already have an account? <Link href="/login">Sign in</Link>.
           </p>
