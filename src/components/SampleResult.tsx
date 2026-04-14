@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import sampleDataJson from '../lib/sampleData.json';
 
 type MatchItem = {
   skill: string;
@@ -21,6 +22,8 @@ type FitResponse = {
   analyst_note: string;
 };
 
+const sampleData = sampleDataJson as FitResponse;
+
 const READINESS_BANDS = [
   { label: 'Mismatch', start: 0, end: 20, color: '#ef4444' },
   { label: 'Stretch', start: 20, end: 40, color: '#f59e0b' },
@@ -28,57 +31,6 @@ const READINESS_BANDS = [
   { label: 'Strong', start: 60, end: 80, color: '#38bdf8' },
   { label: 'Ready', start: 80, end: 100, color: '#6366f1' },
 ];
-
-const mockAiResponse: FitResponse = {
-  job_title: 'Senior operations associate for a fast-growing hiring platform',
-  overall_fit: 'MODERATE',
-  overall_summary:
-    'Candidate has relevant experience with student projects and basic skills in Excel and SQL, but lacks experience with ATS tools and deeper SQL skills.',
-  strong_matches: [
-    {
-      skill: 'Structured workflows, checklists, and repetitive admin tasks',
-      note: 'Candidate has relevant experience with student projects.',
-    },
-  ],
-  partial_matches: [
-    {
-      skill: 'Basic SQL queries',
-      gap_detail: 'Limited experience with SQL queries and no mention of more complex queries.',
-      priority: 'IMPORTANT',
-      learnability: 'FAST',
-      action: 'Complete a course on SQL fundamentals, such as DataCamp's "Intro to SQL".',
-    },
-    {
-      skill: 'Spreadsheets (data tracking and visualization)',
-      gap_detail: 'Limited experience with dashboard building and no mention of data visualization tools.',
-      priority: 'IMPORTANT',
-      learnability: 'FAST',
-      action: 'Practice building more complex dashboards in Google Sheets or Excel using templates from platforms like Tableau or Power BI.',
-    },
-    {
-      skill: 'Communication and coordination',
-      gap_detail: 'Mentions of communication with teachers and classmates are limited to academic setting.',
-      priority: 'CRITICAL',
-      learnability: 'MEDIUM',
-      action: 'Practice coordinating with multiple stakeholders and taking on customer-facing roles, such as in online communities or freelance writing.',
-    },
-    {
-      skill: 'Familiarity with ATS tools and reporting',
-      gap_detail: 'No experience with ATS tools and only mentions basic SQL.',
-      priority: 'NICE TO HAVE',
-      learnability: 'MEDIUM',
-      action: 'Familiarize yourself with popular ATS tools like Workday or BambooHR by watching tutorials or attending webinars, and practice generating reports using basic SQL queries.',
-    },
-  ],
-  noise_skills: ['Strong communication, attention to detail, and comfort with spreadsheets'],
-  readiness_score: 50,
-  bridge_steps: [
-    'Take online courses to further develop SQL skills and practice with real-world data.',
-    'Build experience working with ATS tools and reporting through internships, freelance work, or volunteering.',
-  ],
-  analyst_note:
-    'Candidate has a good foundation in basic skills like SQL and spreadsheets, but lacks experience in critical areas like ATS tools and reporting, and more complex SQL queries.',
-};
 
 const fitToneMap: Record<FitResponse['overall_fit'], string> = {
   STRONG: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40',
@@ -105,7 +57,7 @@ export default function SampleResult() {
     'Senior operations associate role supporting recruiter workflows, ATS reporting, SQL-based reporting, and stakeholder coordination.';
   const candidateText =
     'Student project coordinator with Excel and basic SQL familiarity, strong attention to detail, and experience running repeatable processes.';
-  const [response, setResponse] = useState<FitResponse | null>(mockAiResponse);
+  const [response, setResponse] = useState<FitResponse | null>(sampleData);
 
   const readinessTone = useMemo(() => {
     if (!response) return 'bg-white/10 text-white/70 border-white/20';
@@ -116,7 +68,7 @@ export default function SampleResult() {
 
   const runSampleAnalysis = () => {
     if (!jdText.trim() || !candidateText.trim()) return;
-    setResponse(mockAiResponse);
+    setResponse(sampleData);
   };
 
   return (
