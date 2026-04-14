@@ -1,7 +1,47 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import SampleResult from '../components/SampleResult';
 import { getSupabaseBrowserClient } from '../lib/supabase';
+
+type FitClass = 'strong' | 'moderate' | 'weak' | 'severely_underqualified';
+
+type MatchItem = {
+  skill?: string;
+  note?: string;
+  gap_detail?: string;
+  priority?: string;
+  learnability?: string;
+  action?: string;
+};
+
+type AnalysisResponse = {
+  job_title?: string;
+  overall_fit?: string;
+  overall_summary?: string;
+  strong_matches?: MatchItem[];
+  partial_matches?: MatchItem[];
+  gaps?: MatchItem[];
+  bridge_steps?: string[];
+  noise_skills?: string[];
+  readiness_score?: number;
+  analyst_note?: string;
+};
+
+type RecentAnalysisItem = {
+  id: string;
+  job_title: string;
+  overall_fit: string;
+  readiness_score: number | null;
+  created_at: string | null;
+  analysis: AnalysisResponse | null;
+};
+
+type FitDisplay = {
+  label: string;
+  className: FitClass;
+};
 
 const SAMPLE_JD = 'Senior operations associate for a fast-growing hiring platform.\n\nYou will own candidate intake, coordinate with recruiters, keep records organized, and help teams move quickly. Strong communication, attention to detail, and comfort with spreadsheets are important. Familiarity with ATS tools, reporting, and basic SQL is a plus.';
 const SAMPLE_SKILLS = 'Coordinated student projects, built simple dashboards in spreadsheets, wrote basic SQL queries, and communicated with teachers and classmates. Comfortable with structured workflows, checklists, and repetitive admin tasks.';
@@ -21,29 +61,29 @@ const FEATURE_CARDS = [
   },
 ];
 
-const FIT_MAP = {
+const FIT_MAP: Record<string, FitDisplay> = {
   STRONG: { label: 'Strong fit', className: 'strong' },
   MODERATE: { label: 'Moderate fit', className: 'moderate' },
   WEAK: { label: 'Weak fit', className: 'weak' },
   SEVERELY_UNDERQUALIFIED: { label: 'Severely underqualified', className: 'severely_underqualified' },
 };
 
-function normalizeFit(value) {
+function normalizeFit(value: unknown) {
   return String(value || 'MODERATE').toUpperCase().replace(/[^A-Z0-9]+/g, '_');
 }
 
-function asList(value) {
-  return Array.isArray(value) ? value.filter(Boolean) : [];
+function asList<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value.filter(Boolean) as T[]) : [];
 }
 
-function formatDate(value) {
+function formatDate(value: string | null) {
   if (!value) return 'just now';
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return 'just now';
   return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(parsed);
 }
 
-function fitLabel(value) {
+function fitLabel(value: unknown) {
   return FIT_MAP[normalizeFit(value)] || FIT_MAP.MODERATE;
 }
 
@@ -51,15 +91,17 @@ export default function Home() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [jd, setJd] = useState('');
   const [skills, setSkills] = useState('');
-  const [analysis, setAnalysis] = useState(null);
-  const [recent, setRecent] = useState([]);
+  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
+  const [recent, setRecent] = useState<RecentAnalysisItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!supabase) {
+    const client = supabase;
+
+    if (!client) {
       setLoadingHistory(false);
       setRecent([]);
       setMessage('Add Supabase env vars to enable saved history.');
@@ -70,7 +112,7 @@ export default function Home() {
 
     async function loadHistory() {
       setLoadingHistory(true);
-      const response = await supabase
+      const response = await client!
         .from('analyses')
         .select('id, job_title, overall_fit, readiness_score, created_at, analysis')
         .order('created_at', { ascending: false })
@@ -82,7 +124,7 @@ export default function Home() {
         setRecent([]);
         setMessage('Supabase is connected, but the analyses table is not ready yet.');
       } else {
-        setRecent(response.data || []);
+        setRecent((response.data || []) as RecentAnalysisItem[]);
         setMessage('Saved history is live through Supabase.');
       }
 
@@ -97,20 +139,21 @@ export default function Home() {
   }, [supabase]);
 
   async function refreshHistory() {
-    if (!supabase) return;
+    const client = supabase;
+    if (!client) return;
 
-    const response = await supabase
+    const response = await client!
       .from('analyses')
       .select('id, job_title, overall_fit, readiness_score, created_at, analysis')
       .order('created_at', { ascending: false })
       .limit(6);
 
     if (!response.error) {
-      setRecent(response.data || []);
+      setRecent((response.data || []) as RecentAnalysisItem[]);
     }
   }
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError('');
@@ -123,7 +166,7 @@ export default function Home() {
         body: JSON.stringify({ jd, skills }),
       });
 
-      const payload = await response.json();
+      const payload = (await response.json()) as AnalysisResponse & { error?: string };
 
       if (!response.ok) {
         throw new Error(payload.error || 'The analysis request failed.');
@@ -151,8 +194,8 @@ export default function Home() {
           void refreshHistory();
         }
       }
-    } catch (err) {
-      setError(err && err.message ? err.message : 'Something went wrong.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
       setLoading(false);
     }
@@ -166,11 +209,11 @@ export default function Home() {
   }
 
   const fit = fitLabel(analysis?.overall_fit);
-  const strongMatches = asList(analysis?.strong_matches);
-  const partialMatches = asList(analysis?.partial_matches);
-  const gaps = asList(analysis?.gaps);
-  const bridgeSteps = asList(analysis?.bridge_steps);
-  const noiseSkills = asList(analysis?.noise_skills);
+  const strongMatches = asList<MatchItem>(analysis?.strong_matches);
+  const partialMatches = asList<MatchItem>(analysis?.partial_matches);
+  const gaps = asList<MatchItem>(analysis?.gaps);
+  const bridgeSteps = asList<string>(analysis?.bridge_steps);
+  const noiseSkills = asList<string>(analysis?.noise_skills);
   const readinessScore = typeof analysis?.readiness_score === 'number' ? analysis.readiness_score : null;
   const canUseHistory = Boolean(supabase);
 
@@ -186,9 +229,12 @@ export default function Home() {
             </div>
           </div>
           <div className="badges">
-            <span className="badge"><span className="badge-dot" />OpenRouter backend</span>
-            <span className="badge"><span className="badge-dot" />Vercel-ready</span>
-            <span className="badge"><span className="badge-dot" />Supabase history</span>
+            <Link className="badge nav-link" href="/dashboard">Dashboard</Link>
+            <Link className="badge nav-link" href="/pricing">Pricing</Link>
+            <Link className="badge nav-link" href="/features">Features</Link>
+            <Link className="badge nav-link" href="/contact">Contact</Link>
+            <Link className="badge nav-link" href="/login">Login</Link>
+            <Link className="badge nav-link" href="/signup">Sign up</Link>
           </div>
         </header>
 
@@ -219,6 +265,18 @@ export default function Home() {
                 <p>{card.copy}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="sample-section">
+          <div className="panel">
+            <div className="panel-head">
+              <div>
+                <p className="panel-kicker">Designed sample output</p>
+                <h2>Reference analysis card</h2>
+              </div>
+            </div>
+            <SampleResult />
           </div>
         </section>
 
