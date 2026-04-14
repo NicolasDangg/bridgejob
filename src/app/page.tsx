@@ -87,6 +87,21 @@ function fitLabel(value: unknown) {
   return FIT_MAP[normalizeFit(value)] || FIT_MAP.MODERATE;
 }
 
+function normalizePriority(value: unknown) {
+  const normalized = String(value || '').toUpperCase().replace(/[^A-Z0-9]+/g, '_');
+  if (normalized === 'NICE_TO_HAVE' || normalized === 'NICE_TOHAVE') return 'NICE_TO_HAVE';
+  if (normalized === 'CRITICAL') return 'CRITICAL';
+  if (normalized === 'IMPORTANT') return 'IMPORTANT';
+  return 'IMPORTANT';
+}
+
+function priorityTone(value: unknown) {
+  const normalized = normalizePriority(value);
+  if (normalized === 'NICE_TO_HAVE') return { label: 'NICE TO HAVE', className: 'nice_to_have' };
+  if (normalized === 'CRITICAL') return { label: 'CRITICAL', className: 'critical' };
+  return { label: 'IMPORTANT', className: 'important' };
+}
+
 export default function Home() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [jd, setJd] = useState('');
@@ -215,6 +230,8 @@ export default function Home() {
   const bridgeSteps = asList<string>(analysis?.bridge_steps);
   const noiseSkills = asList<string>(analysis?.noise_skills);
   const readinessScore = typeof analysis?.readiness_score === 'number' ? analysis.readiness_score : null;
+  const readinessPercent = readinessScore === null ? 0 : Math.max(0, Math.min(100, readinessScore));
+  const analystNote = analysis?.analyst_note ? String(analysis.analyst_note) : '';
   const canUseHistory = Boolean(supabase);
 
   return (
@@ -236,8 +253,32 @@ export default function Home() {
             <Link className="badge nav-link" href="/login">Login</Link>
             <Link className="badge nav-link" href="/signup">Sign up</Link>
           </div>
-        </header>
-
+        {showOnboarding ? (
+          <div className="onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+            <button className="onboarding-backdrop" type="button" aria-label="Dismiss onboarding" onClick={() => setShowOnboarding(false)} />
+            <section className="onboarding-card">
+              <div className="onboarding-card__header">
+                <div>
+                  <p className="panel-kicker">Onboarding</p>
+                  <h2 id="onboarding-title">A calmer starting point</h2>
+                  <p className="helper">The new design keeps the analysis approachable while the fit logic stays honest underneath.</p>
+                </div>
+                <button type="button" className="button secondary onboarding-skip" onClick={() => setShowOnboarding(false)}>
+                  Skip
+                </button>
+              </div>
+              <div className="onboarding-steps">
+                {ONBOARDING_STEPS.map((step) => (
+                  <article className="onboarding-step" key={step.id}>
+                    <span className="onboarding-step__id">{step.id}</span>
+                    <strong>{step.title}</strong>
+                    <p>{step.body}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </div>
+        ) : null}
         <section className="hero">
           <div className="hero-copy">
             <p className="eyebrow">Professional / minimalist / cozy</p>
@@ -281,7 +322,7 @@ export default function Home() {
         </section>
 
         <section className="workspace" id="analyze-workspace">
-          <div className="panel">
+          <div className="panel workspace-panel workspace-panel--input">
             <div className="panel-head">
               <div>
                 <p className="panel-kicker">Analysis workspace</p>
@@ -320,7 +361,7 @@ export default function Home() {
             </form>
           </div>
 
-          <aside className="panel sticky">
+          <aside className="panel sticky workspace-panel workspace-panel--summary">
             <div className="panel-head">
               <div>
                 <p className="panel-kicker">Output</p>
@@ -331,6 +372,38 @@ export default function Home() {
 
             {analysis ? (
               <>
+                {analystNote ? (
+                  <div className="note-card analyst-note-card">
+                    <strong>Analyst note</strong>
+                    <p className="helper">{analystNote}</p>
+                  </div>
+                ) : null}
+
+                <div className="readiness-card">
+                  <div className="readiness-card__head">
+                    <div>
+                      <p className="panel-kicker">Readiness score</p>
+                      <strong>{readinessScore === null ? "—" : readinessScore}</strong>
+                    </div>
+                    <span className="meta-label">Apple Weather style bar</span>
+                  </div>
+
+                  <div
+                    className="readiness-bar"
+                    aria-label={readinessScore === null ? "Readiness score unavailable" : "Readiness score " + readinessScore + " out of 100"}
+                  >
+                    {READINESS_BANDS.map((band) => {
+                      const width = band.end - band.start;
+                      return <div key={band.label} className="readiness-band" style={{ width: width + "%", backgroundColor: band.color }} title={band.label} />;
+                    })}
+                    {readinessScore !== null ? <span className="readiness-marker" style={{ left: readinessPercent + "%" }} /> : null}
+                  </div>
+
+                  <div className="readiness-labels">
+                    {READINESS_BANDS.map((band) => <span key={band.label}>{band.label}</span>)}
+                  </div>
+                </div>
+
                 <p className="summary">{analysis.overall_summary}</p>
 
                 <div className="metric-row">
@@ -362,21 +435,33 @@ export default function Home() {
                     <h3>Priority gaps</h3>
                     {gaps.length || partialMatches.length ? (
                       <div className="note-row">
-                        {partialMatches.map((item, index) => (
-                          <div className="note-card" key={(item.skill || 'partial') + index}>
-                            <strong>{item.skill}</strong>
-                            <p className="helper">{item.gap_detail}</p>
-                            <p className="helper">Priority: {item.priority} · Learnability: {item.learnability}</p>
-                            <p className="helper">{item.action}</p>
-                          </div>
-                        ))}
-                        {gaps.map((item, index) => (
-                          <div className="note-card" key={(item.skill || 'gap') + index}>
-                            <strong>{item.skill}</strong>
-                            <p className="helper">Priority: {item.priority} · Learnability: {item.learnability}</p>
-                            <p className="helper">{item.action}</p>
-                          </div>
-                        ))}
+                        {partialMatches.map((item, index) => {
+                          const priority = priorityTone(item.priority);
+                          return (
+                            <div className="note-card gap-card" key={(item.skill || 'partial') + index}>
+                              <div className="note-card-head">
+                                <strong>{item.skill}</strong>
+                                <span className={'priority-chip priority-chip--' + priority.className}>{priority.label}</span>
+                              </div>
+                              <p className="helper">{item.gap_detail}</p>
+                              <p className="helper">Learnability: {item.learnability}</p>
+                              <p className="helper">{item.action}</p>
+                            </div>
+                          );
+                        })}
+                        {gaps.map((item, index) => {
+                          const priority = priorityTone(item.priority);
+                          return (
+                            <div className="note-card gap-card" key={(item.skill || 'gap') + index}>
+                              <div className="note-card-head">
+                                <strong>{item.skill}</strong>
+                                <span className={'priority-chip priority-chip--' + priority.className}>{priority.label}</span>
+                              </div>
+                              <p className="helper">Learnability: {item.learnability}</p>
+                              <p className="helper">{item.action}</p>
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="helper">No concrete gaps were identified.</p>
