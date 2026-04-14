@@ -112,6 +112,7 @@ export default function Home() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [showOnboarding, setShowOnboarding] = useState(true);
 
   useEffect(() => {
     const client = supabase;
