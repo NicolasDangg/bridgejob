@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { motion } from "motion/react";
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { useRef } from "react";
 import Dashboard from "./components/Dashboard";
 import Pricing from "./components/Pricing";
@@ -15,20 +15,14 @@ import Signup from "./components/Signup";
 import SampleResult from "./components/SampleResult";
 
 function Hero() {
-  const navigate = useNavigate();
   const sampleRef = useRef<HTMLDivElement>(null);
-  const isLoggedIn = false; // Mock auth state
 
   const scrollToSample = () => {
     sampleRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const handleAnalyzeClick = () => {
-    if (isLoggedIn) {
-      navigate("/dashboard");
-    } else {
-      navigate("/login");
-    }
+    scrollToSample();
   };
 
   const containerVariants = {
@@ -87,12 +81,12 @@ function Hero() {
               BridgeJob
             </Link>
             <div className="hidden md:flex items-center gap-6">
-              {[
-                { name: "Dashboard", path: "/dashboard" },
-                { name: "Pricing", path: "/pricing" },
-                { name: "Features", path: "/features" },
-                { name: "Contact us", path: "/contact" }
-              ].map((item) => (
+                {[
+                  { name: "Dashboard", path: "/dashboard" },
+                  { name: "Pricing", path: "/pricing" },
+                  { name: "Features", path: "/features" },
+                  { name: "Contact", path: "/contact" }
+                ].map((item) => (
                 <Link
                   key={item.name}
                   to={item.path}

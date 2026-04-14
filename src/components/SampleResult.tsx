@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 type MatchItem = {
   skill: string;
@@ -88,11 +89,13 @@ const priorityToneMap: Record<NonNullable<MatchItem['priority']>, string> = {
 };
 
 export default function SampleResult() {
-  const jdText =
-    'Senior operations associate role supporting recruiter workflows, ATS reporting, SQL-based reporting, and stakeholder coordination.';
-  const candidateText =
-    'Student project coordinator with Excel and basic SQL familiarity, strong attention to detail, and experience running repeatable processes.';
-  const [response, setResponse] = useState<FitResponse | null>(mockAiResponse);
+  const [jdText, setJdText] = useState(
+    'Senior operations associate role supporting recruiter workflows, ATS reporting, SQL-based reporting, and stakeholder coordination.',
+  );
+  const [candidateText, setCandidateText] = useState(
+    'Student project coordinator with Excel and basic SQL familiarity, strong attention to detail, and experience running repeatable processes.',
+  );
+  const [response, setResponse] = useState<FitResponse | null>(null);
 
   const readinessTone = useMemo(() => {
     if (!response) return 'bg-white/10 text-white/70 border-white/20';
@@ -107,21 +110,21 @@ export default function SampleResult() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-center gap-6 lg:gap-8 xl:gap-10 px-3 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[460px] min-h-[530px] mx-auto lg:mx-0 p-8 bg-white/[0.08] backdrop-blur-md rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.25)] lg:self-center">
+    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-center gap-4 lg:gap-6 px-3 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[440px] min-h-[480px] mx-auto lg:mx-0 p-7 bg-white/[0.08] backdrop-blur-md rounded-3xl shadow-[0_24px_60px_rgba(0,0,0,0.25)] lg:self-center">
         <h2 className="text-2xl font-serif font-bold text-white mb-2">Try The Fit Analyzer</h2>
-        <p className="text-white/70 text-sm mb-6">
-          Enter a job description and candidate experience. This preview uses your provided JSON as the AI response.
+        <p className="text-white/70 text-sm mb-5">
+          Enter a job description and candidate experience to run an instant fit check.
         </p>
 
-        <div className="h-[calc(100%-6rem)] flex flex-col justify-between">
-          <div className="space-y-4">
+        <div className="h-[calc(100%-5.25rem)] flex flex-col">
+          <div className="space-y-3">
           <label className="block">
             <span className="block text-xs uppercase tracking-[0.2em] font-semibold text-white/60 mb-2">Job Description</span>
             <textarea
               value={jdText}
-              readOnly
-              className="w-full h-24 rounded-2xl bg-black/20 text-white/90 placeholder:text-white/40 p-4 text-sm leading-relaxed resize-none focus:outline-none"
+              onChange={(event) => setJdText(event.target.value)}
+              className="w-full h-20 rounded-2xl bg-black/20 text-white/90 placeholder:text-white/40 p-3 text-sm leading-relaxed resize-none focus:outline-none"
               placeholder="Paste the JD here"
             />
           </label>
@@ -130,46 +133,64 @@ export default function SampleResult() {
             <span className="block text-xs uppercase tracking-[0.2em] font-semibold text-white/60 mb-2">Candidate Experience</span>
             <textarea
               value={candidateText}
-              readOnly
-              className="w-full h-24 rounded-2xl bg-black/20 text-white/90 placeholder:text-white/40 p-4 text-sm leading-relaxed resize-none focus:outline-none"
+              onChange={(event) => setCandidateText(event.target.value)}
+              className="w-full h-20 rounded-2xl bg-black/20 text-white/90 placeholder:text-white/40 p-3 text-sm leading-relaxed resize-none focus:outline-none"
               placeholder="Paste resume or experience summary"
             />
           </label>
           </div>
 
-          <button
-            type="button"
-            onClick={runSampleAnalysis}
-            disabled
-            className="mt-auto w-full sm:w-auto px-6 py-3 bg-white/70 text-zinc-900 rounded-full font-semibold cursor-not-allowed"
-          >
-            Login/Signup to Run Analysis
-          </button>
+          <div className="pt-6 mt-auto flex justify-center">
+            <button
+              type="button"
+              onClick={runSampleAnalysis}
+              className="w-full sm:w-[220px] px-6 py-3 bg-white text-zinc-900 rounded-full font-semibold hover:bg-zinc-100 transition-colors"
+            >
+              Run Analysis
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="w-full lg:flex-1 lg:max-w-[960px]">
         {response ? (
-          <div className="space-y-4 lg:space-y-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-3 lg:space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-white/60 font-semibold">Fit Summary</p>
                 <h3 className="text-3xl lg:text-4xl font-serif font-bold text-white mt-1 leading-tight">{response.job_title}</h3>
               </div>
-              <div className="flex gap-2">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${fitToneMap[response.overall_fit]}`}>
+              <div className="flex items-stretch gap-3">
+                <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold leading-none border ${fitToneMap[response.overall_fit]}`}>
                   {response.overall_fit} FIT
                 </span>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold border ${readinessTone}`}>
-                  {response.readiness_score}% READY
-                </span>
+                <div className={`min-w-[130px] rounded-2xl border px-4 py-3 text-center ${readinessTone}`}>
+                  <p className="text-[10px] uppercase tracking-[0.2em] font-semibold">Readiness</p>
+                  <p className="text-3xl font-bold leading-none mt-2">{response.readiness_score}%</p>
+                </div>
               </div>
             </div>
 
-            <p className="text-white/75 text-sm leading-relaxed">{response.overall_summary}</p>
+            <div className="rounded-3xl bg-white/[0.1] backdrop-blur-sm border border-white/20 p-4 shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.15em] text-white/65 font-semibold mb-1">Overall Summary</p>
+                  <p className="text-white/85 text-sm leading-relaxed">{response.overall_summary}</p>
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-xs text-white/75">Save this result</span>
+                  <Link to="/login" className="px-3 py-1.5 rounded-full text-[11px] font-semibold text-white border border-white/35 hover:bg-white/10 transition-colors">
+                    Log in
+                  </Link>
+                  <Link to="/signup" className="px-3 py-1.5 rounded-full text-[11px] font-semibold bg-white text-zinc-900 hover:bg-zinc-100 transition-colors">
+                    Create account
+                  </Link>
+                </div>
+              </div>
+            </div>
 
-            <div className="rounded-3xl bg-white/[0.07] backdrop-blur-sm border border-white/15 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
-              <p className="text-xs uppercase tracking-[0.15em] text-white/60 font-semibold mb-2">Strong Match</p>
+            <div className="rounded-3xl bg-white/[0.07] backdrop-blur-sm border border-white/15 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
+              <p className="text-xs uppercase tracking-[0.15em] text-white/60 font-semibold mb-1">Strong Match</p>
               {response.strong_matches.map((match, index) => (
                 <div key={index} className="text-sm text-white/85">
                   <p className="font-semibold text-white">{match.skill}</p>
@@ -180,24 +201,33 @@ export default function SampleResult() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 lg:gap-4">
               {response.partial_matches.map((match, index) => (
-                <div key={index} className="rounded-3xl bg-white/[0.07] backdrop-blur-sm border border-white/15 p-4 h-[clamp(240px,31vh,340px)] shadow-[0_10px_30px_rgba(0,0,0,0.14)] flex flex-col overflow-y-auto pr-2 [scrollbar-gutter:stable] card-scroll">
+                <div key={index} className="rounded-3xl bg-white/[0.07] backdrop-blur-sm border border-white/15 p-4 min-h-[210px] shadow-[0_10px_30px_rgba(0,0,0,0.14)] flex flex-col gap-2">
                   <p className="font-semibold text-white text-sm leading-snug">{match.skill}</p>
                   {match.priority ? (
-                    <span className={`mt-2 mb-2 self-start text-[11px] font-bold uppercase px-2 py-1 rounded border ${priorityToneMap[match.priority]}`}>
+                    <span className={`self-start text-[11px] font-bold uppercase px-2 py-1 rounded border ${priorityToneMap[match.priority]}`}>
                       {match.priority}
                     </span>
                   ) : null}
-                  {match.gap_detail ? <p className="text-white/70 text-xs mb-2">{match.gap_detail}</p> : null}
-                  {match.action ? <p className="text-white/80 text-xs">Action: {match.action}</p> : null}
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-white/55 font-semibold">Gap</p>
+                    <p className="text-white/75 text-xs leading-relaxed">{match.gap_detail ?? 'No gap detail provided.'}</p>
+                  </div>
+                  <div className="space-y-1 mt-auto">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-white/55 font-semibold">Action</p>
+                    <p className="text-white/90 text-xs leading-relaxed">{match.action ?? 'No action step provided.'}</p>
+                  </div>
                 </div>
               ))}
             </div>
 
-            <div className="rounded-3xl bg-white/[0.07] backdrop-blur-sm border border-white/15 p-5 shadow-[0_10px_30px_rgba(0,0,0,0.18)]">
-              <p className="text-xs uppercase tracking-[0.15em] text-white/60 font-semibold mb-2">Bridge Steps</p>
-              <ul className="space-y-2 text-xs text-white/80">
+            <div className="rounded-3xl bg-slate-950/75 backdrop-blur-sm border border-white/25 p-4 shadow-[0_14px_34px_rgba(0,0,0,0.3)]">
+              <p className="text-xs uppercase tracking-[0.15em] text-white/80 font-semibold mb-2">Bridge Steps</p>
+              <ul className="space-y-2 text-sm text-zinc-100">
                 {response.bridge_steps.map((step, index) => (
-                  <li key={index} className="leading-relaxed">{step}</li>
+                  <li key={index} className="leading-relaxed bg-white/[0.06] rounded-xl px-3 py-1.5">
+                    <span className="font-semibold text-white mr-2">{index + 1}.</span>
+                    {step}
+                  </li>
                 ))}
               </ul>
             </div>
