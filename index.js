@@ -8,7 +8,10 @@ try {
 }
 
 const PORT = process.env.PORT || 3000;
+const HOST = '127.0.0.1';
 
-app.listen(PORT, () => {
-  console.log(`BridgeJob API listening on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(
+    `BridgeJob API listening on ${HOST}:${PORT}`,
+  );
 });
