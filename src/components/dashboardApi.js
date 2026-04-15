@@ -6,20 +6,21 @@ function isJsonResponse(response) {
 function normalizeBaseUrl(baseUrl) {
   if (!baseUrl) return '';
 
-  const trimmed = baseUrl.replace(/\/+$/, '');
-  if (trimmed.endsWith('/api/analyze')) {
-    return trimmed.slice(0, -'/analyze'.length);
-  }
-  if (trimmed.endsWith('/api')) {
-    return trimmed;
-  }
-  return trimmed;
+  return baseUrl.replace(/\/+$/, '');
 }
 
 export function buildAnalyzeEndpoint(baseUrl) {
   const normalized = normalizeBaseUrl(baseUrl);
   if (!normalized) {
     return '/api/analyze';
+  }
+
+  if (normalized.endsWith('/api/analyze')) {
+    return normalized;
+  }
+
+  if (normalized.endsWith('/api')) {
+    return `${normalized}/analyze`;
   }
 
   return `${normalized}/api/analyze`;
