@@ -1,12 +1,11 @@
-'use strict';
+import dotenv from 'dotenv';
+import app from './src/app.js';
 
 try {
-  require('dotenv').config();
+  dotenv.config();
 } catch {
   // Allow startup without dotenv when env vars are provided by the host.
 }
-
-const app = require('./src/app');
 
 const PORT = process.env.PORT || 3000;
 

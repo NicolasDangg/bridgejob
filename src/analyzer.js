@@ -1,40 +1,63 @@
 import { buildSystemPrompt, buildUserPrompt } from './prompt.js';
 
-function createStatusError(message, status) {
+function createDomainError(code, message, details) {
   const err = new Error(message);
-  err.status = status;
+  err.code = code;
+  if (details !== undefined) {
+    err.details = details;
+  }
   return err;
 }
 
-export async function analyzeSkills(jd, skills, fetchImpl) {
+function withTimeout(promise, timeoutMs) {
+  let timeoutId;
+
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(createDomainError('ANALYZE_TIMEOUT', 'Analysis timed out.'));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+}
+
+export async function analyzeSkills(jd, skills, fetchImpl, options = {}) {
   const fetchFn = fetchImpl || globalThis.fetch;
+  const timeoutMs = options.timeoutMs ?? 20000;
   let response;
 
   if (!process.env.GROQ_API_KEY) {
-    throw createStatusError('Missing GROQ_API_KEY environment variable.', 500);
+    throw createDomainError('ANALYZE_CONFIG', 'Missing GROQ_API_KEY environment variable.');
   }
 
   try {
-    response = await fetchFn('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: 'Bearer ' + process.env.GROQ_API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
-        messages: [
-          { role: 'system', content: buildSystemPrompt() },
-          { role: 'user', content: buildUserPrompt(jd, skills) },
-        ],
+    response = await withTimeout(
+      fetchFn('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            { role: 'system', content: buildSystemPrompt() },
+            { role: 'user', content: buildUserPrompt(jd, skills) },
+          ],
+        }),
       }),
-    });
+      timeoutMs,
+    );
   } catch (err) {
-    throw createStatusError('Groq request failed: ' + err.message, 502);
+    if (err?.code === 'ANALYZE_TIMEOUT') {
+      throw err;
+    }
+    throw createDomainError('ANALYZE_UPSTREAM', `Groq request failed: ${err.message}`);
   }
 
   if (!response || !response.ok) {
-    const status = response ? response.status : 502;
     let detail = '';
 
     if (response) {
@@ -46,14 +69,17 @@ export async function analyzeSkills(jd, skills, fetchImpl) {
     }
 
     const suffix = detail ? ' Detail: ' + detail : '';
-    throw createStatusError('Groq request failed with status ' + status + '.' + suffix, status);
+    throw createDomainError(
+      'ANALYZE_UPSTREAM',
+      `Groq request failed with status ${response?.status ?? 500}.${suffix}`,
+    );
   }
 
   const data = await response.json();
   const raw = data?.choices?.[0]?.message?.content;
 
   if (typeof raw !== 'string' || raw.trim() === '') {
-    throw createStatusError('Groq returned an unexpected response format.', 502);
+    throw createDomainError('ANALYZE_INVALID_RESPONSE', 'Groq returned an unexpected response format.');
   }
 
   const normalized = raw
@@ -65,10 +91,10 @@ export async function analyzeSkills(jd, skills, fetchImpl) {
   try {
     result = JSON.parse(normalized);
   } catch {
-    throw createStatusError('AI returned non-JSON response: ' + raw, 422);
+    throw createDomainError('ANALYZE_INVALID_RESPONSE', 'AI returned non-JSON response.');
   }
 
   return result;
 }
 
-export { createStatusError };
+export { createDomainError };

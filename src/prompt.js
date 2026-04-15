@@ -1,5 +1,10 @@
-import schema from './schema.json';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const schemaPath = path.join(__dirname, 'schema.json');
+const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
 const schemaText = JSON.stringify(schema, null, 2);
 
 export function buildSystemPrompt() {
@@ -14,6 +19,7 @@ Your task:
   * PARTIAL MATCH: Candidate has something related but not exact
   * GAP: Candidate does not have this
   * UNCLEAR: JD is vague or candidate's description is ambiguous
+- DO NOT INCLUDE COMMENTS
 
 For every GAP and PARTIAL MATCH, provide:
 - Priority level: CRITICAL (likely dealbreaker), IMPORTANT (weakens application), NICE TO HAVE

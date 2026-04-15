@@ -1,155 +1,105 @@
-'use strict';
+import assert from 'node:assert/strict';
+import { afterEach, beforeEach, describe, test } from 'node:test';
+import http from 'node:http';
+import app from '../src/app.js';
 
-const request = require('supertest');
-const app = require('../src/app');
+const nativeFetch = globalThis.fetch;
 
-// Mock the analyzer module so tests don't call the real OpenRouter API
-jest.mock('../src/analyzer', () => ({
-  analyzeSkills: jest.fn(),
-}));
-
-const { analyzeSkills } = require('../src/analyzer');
-
-/** Minimal valid analysis payload matching the required schema. */
-const MOCK_ANALYSIS = {
-  job_title: 'Senior Frontend Engineer',
-  overall_fit: 'MODERATE',
-  overall_summary:
-    'The candidate has solid JavaScript fundamentals but lacks required React depth and cloud experience.',
-  strong_matches: [{ skill: 'JavaScript', note: 'Candidate lists JS as primary language.' }],
-  partial_matches: [
-    {
-      skill: 'React',
-      gap_detail: 'Candidate knows basic React but not hooks or context.',
-      priority: 'CRITICAL',
-      learnability: 'MEDIUM',
-      action: 'Complete the Scrimba Advanced React course and build a full CRUD app using hooks and context.',
-    },
-  ],
-  gaps: [
-    {
-      skill: 'AWS',
-      priority: 'IMPORTANT',
-      learnability: 'MEDIUM',
-      action: 'Complete the AWS Cloud Practitioner Essentials free course on AWS Skill Builder.',
-    },
-  ],
-  noise_skills: ['team player', 'fast learner'],
-  readiness_score: 45,
-  bridge_steps: [
-    'Complete Scrimba Advanced React course (2-3 weeks) and ship a React hooks/context project to GitHub.',
-    'Earn the AWS Cloud Practitioner certification to establish baseline cloud credibility.',
-  ],
-  analyst_note: 'JD emphasises React three times — treat it as an absolute requirement.',
+const validPayload = {
+  jd: 'Senior frontend engineer role requiring React architecture, testing, performance tuning, and collaboration.',
+  skills: 'React, TypeScript, component architecture, basic performance optimization, and API integration.',
 };
 
-describe('POST /analyze', () => {
-  beforeEach(() => {
-    analyzeSkills.mockReset();
+function makeGroqResponse(content, { ok = true, status = 200 } = {}) {
+  return {
+    ok,
+    status,
+    async json() {
+      return { choices: [{ message: { content } }] };
+    },
+    async text() {
+      return content;
+    },
+  };
+}
+
+async function requestApi(server, path, body) {
+  const address = server.address();
+  const res = await nativeFetch(`http://127.0.0.1:${address.port}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return {
+    status: res.status,
+    headers: res.headers,
+    body: await res.json(),
+  };
+}
+
+let server;
+let originalFetch;
+let originalKey;
+
+beforeEach(async () => {
+  originalFetch = global.fetch;
+  originalKey = process.env.GROQ_API_KEY;
+  process.env.GROQ_API_KEY = 'test-key';
+  server = http.createServer(app);
+  await new Promise((resolve) => server.listen(0, resolve));
+});
+
+afterEach(async () => {
+  global.fetch = originalFetch;
+  process.env.GROQ_API_KEY = originalKey;
+  await new Promise((resolve) => server.close(resolve));
+});
+
+describe('POST /api/analyze', () => {
+  test('returns 400 envelope for malformed shape', async () => {
+    const res = await requestApi(server, '/api/analyze', { jd: 123, skills: 'abc' });
+    assert.equal(res.status, 400);
+    assert.equal(res.body.success, false);
+    assert.equal(res.body.data, null);
+    assert.equal(res.body.error.code, 'BAD_REQUEST');
   });
 
-  test('serves frontend HTML on GET /', async () => {
-    const res = await request(app).get('/');
-
-    expect(res.status).toBe(200);
-    expect(res.type).toMatch(/html/i);
-    expect(res.text).toMatch(/BridgeJob/);
+  test('returns 422 envelope for semantic validation failure', async () => {
+    const res = await requestApi(server, '/api/analyze', { jd: 'short', skills: 'short' });
+    assert.equal(res.status, 422);
+    assert.equal(res.body.success, false);
+    assert.equal(res.body.error.code, 'UNPROCESSABLE_ENTITY');
   });
 
-  test('returns 400 when `jd` is missing', async () => {
-    const res = await request(app).post('/analyze').send({ skills: 'JavaScript' });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/jd/i);
+  test('returns success envelope for valid input', async () => {
+    global.fetch = async () =>
+      makeGroqResponse(
+        JSON.stringify({
+          job_title: 'Senior Frontend Engineer',
+          overall_fit: 'MODERATE',
+          overall_summary: 'Good foundation with a few critical gaps.',
+          strong_matches: [{ skill: 'React', note: 'Solid production experience.' }],
+          partial_matches: [],
+          gaps: [],
+          noise_skills: [],
+          readiness_score: 62,
+          bridge_steps: ['Strengthen testing strategy for larger applications.'],
+          analyst_note: 'Strong fit with targeted improvements needed.',
+        }),
+      );
+
+    const res = await requestApi(server, '/api/analyze', validPayload);
+    assert.equal(res.status, 200);
+    assert.equal(res.body.success, true);
+    assert.equal(res.body.error, null);
+    assert.equal(typeof res.body.data.job_title, 'string');
   });
 
-  test('returns 400 when `skills` is missing', async () => {
-    const res = await request(app)
-      .post('/analyze')
-      .send({ jd: 'We need a React developer.' });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/skills/i);
-  });
-
-  test('returns 400 when `jd` is an empty string', async () => {
-    const res = await request(app).post('/analyze').send({ jd: '   ', skills: 'JavaScript' });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/jd/i);
-  });
-
-  test('returns 400 when `skills` is an empty string', async () => {
-    const res = await request(app)
-      .post('/analyze')
-      .send({ jd: 'We need a React developer.', skills: '   ' });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/skills/i);
-  });
-
-  test('returns 400 when body is empty', async () => {
-    const res = await request(app).post('/analyze').send({});
-    expect(res.status).toBe(400);
-  });
-
-  test('returns analysis JSON on valid input', async () => {
-    analyzeSkills.mockResolvedValue(MOCK_ANALYSIS);
-
-    const res = await request(app)
-      .post('/analyze')
-      .send({ jd: 'Senior Frontend Engineer…', skills: 'JavaScript, basic React' });
-
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({
-      job_title: expect.any(String),
-      overall_fit: expect.stringMatching(/^(STRONG|MODERATE|WEAK|SEVERELY UNDERQUALIFIED)$/),
-      overall_summary: expect.any(String),
-      strong_matches: expect.any(Array),
-      partial_matches: expect.any(Array),
-      gaps: expect.any(Array),
-      noise_skills: expect.any(Array),
-      readiness_score: expect.any(Number),
-      bridge_steps: expect.any(Array),
-      analyst_note: expect.any(String),
-    });
-  });
-
-  test('calls analyzeSkills with trimmed jd and skills', async () => {
-    analyzeSkills.mockResolvedValue(MOCK_ANALYSIS);
-
-    const jd = '  We need a React developer.  ';
-    const skills = '  JavaScript  ';
-
-    await request(app).post('/analyze').send({ jd, skills });
-
-    expect(analyzeSkills).toHaveBeenCalledWith(
-      'We need a React developer.',
-      'JavaScript',
-    );
-  });
-
-  test('returns analyzer-provided status when analyzeSkills throws with status', async () => {
-    const err = new Error('OpenRouter rate limited');
-    err.status = 429;
-    analyzeSkills.mockRejectedValue(err);
-
-    const res = await request(app)
-      .post('/analyze')
-      .send({ jd: 'We need a React developer.', skills: 'JavaScript' });
-
-    expect(res.status).toBe(429);
-    expect(res.body.error).toBeDefined();
-    expect(res.body.detail).toBe('OpenRouter rate limited');
-  });
-
-  test('readiness_score is a number between 0 and 100', async () => {
-    analyzeSkills.mockResolvedValue(MOCK_ANALYSIS);
-
-    const res = await request(app)
-      .post('/analyze')
-      .send({ jd: 'Senior Frontend Engineer…', skills: 'JavaScript' });
-
-    expect(res.status).toBe(200);
-    const score = res.body.readiness_score;
-    expect(typeof score).toBe('number');
-    expect(score).toBeGreaterThanOrEqual(0);
-    expect(score).toBeLessThanOrEqual(100);
+  test('returns 500 envelope for analyzer internal failure', async () => {
+    delete process.env.GROQ_API_KEY;
+    const res = await requestApi(server, '/api/analyze', validPayload);
+    assert.equal(res.status, 500);
+    assert.equal(res.body.success, false);
+    assert.equal(res.body.error.code, 'INTERNAL_ERROR');
   });
 });

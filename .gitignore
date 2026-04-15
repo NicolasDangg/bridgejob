@@ -1,10 +1,11 @@
 node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
 .next/
-.vercel/
 out/
-.env
-
-tests/
-
-.github/
-package-lock.json
+bridgejob (1)/
