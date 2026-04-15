@@ -3,13 +3,26 @@ function isJsonResponse(response) {
   return contentType.toLowerCase().includes('application/json');
 }
 
+function normalizeBaseUrl(baseUrl) {
+  if (!baseUrl) return '';
+
+  const trimmed = baseUrl.replace(/\/+$/, '');
+  if (trimmed.endsWith('/api/analyze')) {
+    return trimmed.slice(0, -'/analyze'.length);
+  }
+  if (trimmed.endsWith('/api')) {
+    return trimmed;
+  }
+  return trimmed;
+}
+
 export function buildAnalyzeEndpoint(baseUrl) {
-  if (!baseUrl) {
+  const normalized = normalizeBaseUrl(baseUrl);
+  if (!normalized) {
     return '/api/analyze';
   }
 
-  const trimmed = baseUrl.replace(/\/+$/, '');
-  return `${trimmed}/api/analyze`;
+  return `${normalized}/api/analyze`;
 }
 
 async function requestOnce(fetchFn, endpoint, input) {
@@ -41,9 +54,7 @@ export async function requestDashboardAnalysis(fetchFn, endpoint, input, fallbac
   } catch (err) {
     const shouldRetryWithFallback =
       Boolean(fallbackEndpoint) &&
-      fallbackEndpoint !== endpoint &&
-      err instanceof Error &&
-      /Analysis service error \(500\)\./.test(err.message);
+      fallbackEndpoint !== endpoint;
 
     if (shouldRetryWithFallback) {
       return requestOnce(fetchFn, fallbackEndpoint, input);
