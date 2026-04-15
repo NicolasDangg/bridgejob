@@ -1,12 +1,140 @@
-import React from 'react';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../lib/AuthContext";
 
 export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { setUser } = useAuth();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    setLoading(true);
+    setError(null);
+
+    // Hard-coded Test Credentials Bypass (DEV ONLY)
+    if (import.meta.env.DEV) {
+      try {
+        const { testUser } = await import('../lib/testCredentials.json');
+        if (email === testUser.email && password === testUser.password) {
+          // Mock a user object
+          const mockUser = {
+            id: 'test-user-id',
+            email: testUser.email,
+            user_metadata: { full_name: testUser.fullName },
+            aud: 'authenticated',
+            role: 'authenticated',
+            created_at: new Date().toISOString()
+          };
+          
+          // Use the manual setter to update AuthContext
+          setUser(mockUser as any);
+          
+          setLoading(false);
+          navigate("/dashboard");
+          return;
+        }
+      } catch (e) {
+        // JSON file might not exist or be ignored
+        console.log("No test credentials file found, proceeding with Supabase.");
+      }
+    }
+
+    if (!supabase) {
+      setError("Supabase not configured.");
+      setLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+    } else {
+      setLoading(false);
+      navigate("/dashboard");
+    }
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6 },
+    },
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50">
-      <div className="bg-white p-8 rounded-2xl shadow-xl border border-zinc-200 w-full max-w-md">
-        <h1 className="text-2xl font-serif font-bold text-zinc-900 mb-6">Login</h1>
-        <button className="w-full bg-zinc-900 text-white py-3 rounded-lg font-semibold">Sign In</button>
-      </div>
+    <div className="flex items-center justify-center min-h-[calc(100vh-6rem)] p-6">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="w-full max-w-md rounded-[2.5rem] border border-black/10 bg-white/70 backdrop-blur-md p-10 shadow-[0_12px_48px_rgba(0,0,0,0.08)]"
+      >
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-sans font-extrabold text-zinc-900 tracking-tight">Welcome Back</h1>
+          <p className="mt-2 text-zinc-700">Enter your details to access your dashboard.</p>
+        </div>
+
+        <form className="space-y-6" onSubmit={handleLogin}>
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-700 ml-1">Email</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-2xl border border-black/10 bg-white/50 px-5 py-4 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+              placeholder="you@domain.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between ml-1">
+              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-700">Password</label>
+              <Link to="/login" className="text-[10px] font-bold text-zinc-600 hover:text-zinc-900">Forgot?</Link>
+            </div>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-2xl border border-black/10 bg-white/50 px-5 py-4 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+              placeholder="••••••••"
+            />
+          </div>
+
+          {error && <p className="text-xs text-red-600 ml-1">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 rounded-full bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800 transition-all shadow-xl shadow-black/20 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+          >
+            {loading ? "Signing In..." : "Sign In"}
+          </button>
+        </form>
+
+        <div className="mt-10 text-center">
+          <p className="text-sm text-zinc-700">
+            Don't have an account?{" "}
+            <Link to="/signup" className="font-bold text-zinc-900 hover:underline">
+              Sign up
+            </Link>
+          </p>
+        </div>
+      </motion.div>
     </div>
   );
 }

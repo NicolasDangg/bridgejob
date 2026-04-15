@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useAuth } from '../lib/AuthContext';
 
 type MatchItem = {
   skill: string;
@@ -89,6 +90,7 @@ const priorityToneMap: Record<NonNullable<MatchItem['priority']>, string> = {
 };
 
 export default function SampleResult() {
+  const { user } = useAuth();
   const [jdText, setJdText] = useState(
     'Senior operations associate role supporting recruiter workflows, ATS reporting, SQL-based reporting, and stakeholder coordination.',
   );
@@ -109,7 +111,13 @@ export default function SampleResult() {
   }, [response]);
 
   const runSampleAnalysis = async () => {
-    setResponse(mockAiResponse);
+    setIsLoading(true);
+    setError(null);
+    // Simulated delay for demo purposes
+    setTimeout(() => {
+      setResponse(mockAiResponse);
+      setIsLoading(false);
+    }, 1200);
   };
 
   return (
@@ -126,7 +134,7 @@ export default function SampleResult() {
               className="w-full min-h-[calc(100vh-220px)] flex items-center justify-center"
             >
               <div className="w-full max-w-[470px] min-h-[462px] p-6 bg-white/78 border border-black/12 rounded-md shadow-[0_14px_38px_rgba(0,0,0,0.14)]">
-                <h2 className="text-2xl font-serif font-bold text-zinc-900 mb-2">Try The Fit Analyzer</h2>
+                <h2 className="text-2xl font-sans font-extrabold text-zinc-900 mb-2">Try The Fit Analyzer</h2>
                 <p className="text-zinc-700 text-sm mb-4">
                   A sample job description and candidate experience to run an instant fit check.
                 </p>
@@ -179,7 +187,7 @@ export default function SampleResult() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-700 font-semibold">Fit Summary</p>
-                  <h3 className="text-3xl lg:text-4xl font-serif font-bold text-zinc-900 mt-1 leading-tight">{response.job_title}</h3>
+                  <h3 className="text-3xl lg:text-4xl font-sans font-extrabold text-zinc-900 mt-1 leading-tight tracking-tight">{response.job_title}</h3>
                 </div>
                 <div className="w-full lg:max-w-[420px]">
                   <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-800 font-semibold mb-2">
@@ -214,15 +222,17 @@ export default function SampleResult() {
                     <p className="text-xs uppercase tracking-[0.15em] text-zinc-700 font-semibold mb-1">Overall Summary</p>
                     <p className="text-zinc-800 text-sm leading-relaxed">{response.overall_summary}</p>
                   </div>
-                  <div className="flex items-center gap-2 pt-1">
-                    <span className="text-xs text-zinc-700">Save this result? </span>
-                    <Link to="/login" className="px-3 py-1.5 rounded-sm text-[11px] font-semibold text-zinc-900 border border-black/20 hover:bg-black/5 transition-colors">
-                      Log in
-                    </Link>
-                    <Link to="/signup" className="px-3 py-1.5 rounded-sm text-[11px] font-semibold bg-white text-zinc-900 border border-black/12 hover:bg-zinc-100 transition-colors">
-                      Create an account
-                    </Link>
-                  </div>
+                  {!user && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-xs text-zinc-700">Save this result? </span>
+                      <Link to="/login" className="px-3 py-1.5 rounded-sm text-[11px] font-semibold text-zinc-900 border border-black/20 hover:bg-black/5 transition-colors">
+                        Log in
+                      </Link>
+                      <Link to="/signup" className="px-3 py-1.5 rounded-sm text-[11px] font-semibold bg-white text-zinc-900 border border-black/12 hover:bg-zinc-100 transition-all shadow-sm">
+                        Create an account
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
 
