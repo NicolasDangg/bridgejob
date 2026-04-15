@@ -13,6 +13,7 @@ import Contact from "./components/Contact";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
 import SampleResult from "./components/SampleResult";
+import backgroundImage from "./assets/background.jpg";
 
 function Hero() {
   const sampleRef = useRef<HTMLDivElement>(null);
@@ -43,28 +44,26 @@ function Hero() {
       y: 0,
       transition: {
         duration: 0.8,
-        ease: "cubic-bezier(0.21,0.47,0.32,0.98)",
+        ease: [0.21, 0.47, 0.32, 0.98] as [number, number, number, number],
       },
     },
   };
 
   return (
     <div className="h-screen overflow-y-auto scroll-smooth relative">
-      {/* Fixed Background Video - Persists across sections */}
+      {/* Fixed image background - persists across sections */}
       <div className="fixed inset-0 z-0">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
+        <img
+          src={backgroundImage}
+          alt="Background"
           className="absolute inset-0 w-full h-full object-cover"
-        >
-          <source
-            src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260306_074215_04640ca7-042c-45d6-bb56-58b1e8a42489.mp4"
-            type="video/mp4"
-          />
-        </video>
+          height={1080}
+          width={1920}
+        />
       </div>
+
+      {/* Global readability layer directly above the video background for all sections. */}
+      {/* <div className="fixed inset-0 z-[2] pointer-events-none bg-gradient-to-b from-black/52 via-black/42 to-black/56 backdrop-blur-[2.2px]" /> */}
 
       {/* Floating Navigation Bar */}
       <nav className="fixed top-6 z-50 w-full px-6 flex justify-center">
@@ -72,12 +71,12 @@ function Hero() {
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="flex items-center justify-between w-full max-w-5xl h-14 px-6 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.2)] ring-1 ring-white/[0.05] relative group"
+          className="flex items-center justify-between w-full max-w-5xl h-14 px-6 rounded-full bg-white/72 backdrop-blur-xl border border-black/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] ring-1 ring-black/[0.03] relative group"
         >
-          <div className="absolute -inset-1 bg-gradient-to-r from-white/0 via-white/10 to-white/0 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+          <div className="absolute -inset-1 bg-gradient-to-r from-white/0 via-white/35 to-white/0 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
           <div className="flex items-center gap-8 relative z-10">
-            <Link to="/" className="font-serif font-bold text-xl text-white tracking-tight">
+            <Link to="/" className="font-serif font-bold text-xl text-zinc-900 tracking-tight">
               BridgeJob
             </Link>
             <div className="hidden md:flex items-center gap-6">
@@ -90,7 +89,7 @@ function Hero() {
                 <Link
                   key={item.name}
                   to={item.path}
-                  className="text-sm font-medium text-white/60 hover:text-white transition-colors"
+                  className="text-sm font-medium text-zinc-700 hover:text-zinc-900 transition-colors"
                 >
                   {item.name}
                 </Link>
@@ -99,10 +98,10 @@ function Hero() {
           </div>
 
           <div className="flex items-center gap-4 relative z-10">
-            <Link to="/login" className="text-sm font-medium text-white/70 hover:text-white transition-colors px-4 py-2">
+            <Link to="/login" className="text-sm font-medium text-zinc-700 hover:text-zinc-900 transition-colors px-4 py-2">
               Login
             </Link>
-            <Link to="/signup" className="text-sm font-semibold text-zinc-900 bg-white px-5 py-2 rounded-full hover:bg-zinc-100 transition-all shadow-sm">
+            <Link to="/signup" className="text-sm font-semibold text-zinc-900 bg-white px-5 py-2 rounded-full border border-black/10 hover:bg-zinc-100 transition-all shadow-sm">
               Sign up
             </Link>
           </div>
@@ -113,7 +112,7 @@ function Hero() {
       <section className="relative w-full h-screen flex flex-col items-center justify-center z-10">
         {/* Content Container with Glassy Fade Effect */}
         <div className="relative z-20 flex items-center justify-center w-full max-w-5xl px-6">
-          <div className="absolute inset-0 -z-10 bg-white/5 backdrop-blur-md rounded-[4rem] scale-110 [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_70%)] opacity-80" />
+          <div className="absolute inset-0 -z-10 bg-white/45 backdrop-blur-md rounded-[4rem] scale-110 [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_70%)] opacity-95" />
 
           <motion.div
             className="text-center py-12"
@@ -123,21 +122,21 @@ function Hero() {
           >
             <motion.span
               variants={itemVariants}
-              className="block text-[10px] sm:text-xs uppercase tracking-[0.3em] font-semibold text-white/60 mb-4"
+              className="block text-[10px] sm:text-xs uppercase tracking-[0.3em] font-semibold text-zinc-700 mb-4"
             >
-              Career intelligence, no sugarcoating
+              Career intelligence
             </motion.span>
 
             <motion.h1
               variants={itemVariants}
-              className="text-4xl sm:text-6xl md:text-7xl font-serif font-bold text-white mb-6 leading-[1.1] drop-shadow-lg"
+              className="text-4xl sm:text-6xl md:text-7xl font-serif font-bold text-zinc-900 mb-6 leading-[1.1] drop-shadow-sm"
             >
               Know exactly where <br className="hidden sm:block" /> you stand.
             </motion.h1>
 
             <motion.p
               variants={itemVariants}
-              className="text-base sm:text-lg text-white/80 font-normal max-w-[520px] mx-auto mb-10 leading-relaxed"
+              className="text-base sm:text-lg text-zinc-800 font-normal max-w-[520px] mx-auto mb-10 leading-relaxed"
             >
               Paste a job description and your skills. Get a readiness score,
               every gap ranked by urgency, and a step-by-step plan to close them.
@@ -155,7 +154,7 @@ function Hero() {
               </button>
               <button
                 onClick={scrollToSample}
-                className="w-full sm:w-auto px-10 py-4 bg-white/10 text-white font-medium border border-white/20 backdrop-blur-sm rounded-full hover:bg-white/20 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full sm:w-auto px-10 py-4 bg-white/70 text-zinc-900 font-medium border border-black/12 backdrop-blur-sm rounded-full hover:bg-white/85 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
               >
                 See a sample result
               </button>
@@ -166,7 +165,7 @@ function Hero() {
 
       {/* Sample Result Section */}
       <section ref={sampleRef} className="min-h-screen flex items-center justify-center z-10 relative pt-14">
-        <div className="w-full max-w-none px-0 py-[50px]">
+        <div className="w-full max-w-none px-0 py-0">
           <SampleResult />
         </div>
       </section>
