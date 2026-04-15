@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { useRef } from "react";
 import Dashboard from "./components/Dashboard";
@@ -26,7 +26,7 @@ function Hero() {
     scrollToSample();
   };
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -37,14 +37,14 @@ function Hero() {
     },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
         duration: 0.8,
-        ease: [0.21, 0.47, 0.32, 0.98] as [number, number, number, number],
+        ease: [0.21, 0.47, 0.32, 0.98],
       },
     },
   };

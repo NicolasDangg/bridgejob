@@ -6,14 +6,14 @@ type MatchItem = {
   skill: string;
   note?: string;
   gap_detail?: string;
-  priority?: 'CRITICAL' | 'IMPORTANT' | 'OPTIONAL';
+  priority?: 'CRITICAL' | 'IMPORTANT' | 'NICE TO HAVE';
   learnability?: 'FAST' | 'MEDIUM' | 'SLOW';
   action?: string;
 };
 
 type FitResponse = {
   job_title: string;
-  overall_fit: 'STRONG' | 'MODERATE' | 'LOW';
+  overall_fit: 'STRONG' | 'MODERATE' | 'WEAK' | 'SEVERELY UNDERQUALIFIED';
   overall_summary: string;
   strong_matches: MatchItem[];
   partial_matches: MatchItem[];
@@ -23,64 +23,14 @@ type FitResponse = {
   analyst_note: string;
 };
 
-const mockAiResponse: FitResponse = {
-  job_title: 'Senior operations associate for a fast-growing hiring platform',
-  overall_fit: 'MODERATE',
-  overall_summary:
-    'Candidate has relevant experience with student projects and basic skills in Excel and SQL, but lacks experience with ATS tools and deeper SQL skills.',
-  strong_matches: [
-    {
-      skill: 'Structured workflows, checklists, and repetitive admin tasks',
-      note: 'Candidate has relevant experience with student projects.',
-    },
-  ],
-  partial_matches: [
-    {
-      skill: 'Basic SQL queries',
-      gap_detail: 'Limited experience with SQL queries and no mention of more complex queries.',
-      priority: 'IMPORTANT',
-      learnability: 'FAST',
-      action: 'Complete a course on SQL fundamentals, such as DataCamp\'s "Intro to SQL".',
-    },
-    {
-      skill: 'Spreadsheets (data tracking and visualization)',
-      gap_detail: 'Limited experience with dashboard building and no mention of data visualization tools.',
-      priority: 'IMPORTANT',
-      learnability: 'FAST',
-      action:
-        'Practice building more complex dashboards in Google Sheets or Excel using templates from platforms like Tableau or Power BI.',
-    },
-    {
-      skill: 'Communication and coordination',
-      gap_detail: 'Mentions of communication with teachers and classmates are limited to academic setting.',
-      priority: 'CRITICAL',
-      learnability: 'MEDIUM',
-      action:
-        'Practice coordinating with multiple stakeholders and taking on customer-facing roles, such as in online communities or freelance writing.',
-    },
-    {
-      skill: 'Familiarity with ATS tools and reporting',
-      gap_detail: 'No experience with ATS tools and only mentions basic SQL.',
-      priority: 'CRITICAL',
-      learnability: 'MEDIUM',
-      action:
-        'Familiarize yourself with popular ATS tools like Workday or BambooHR by watching tutorials or attending webinars, and practice generating reports using basic SQL queries.',
-    },
-  ],
-  noise_skills: ['Strong communication, attention to detail, and comfort with spreadsheets'],
-  readiness_score: 50,
-  bridge_steps: [
-    'Take online courses to further develop SQL skills and practice with real-world data.',
-    'Build experience working with ATS tools and reporting through internships, freelance work, or volunteering.',
-  ],
-  analyst_note:
-    'Candidate has a good foundation in basic skills like SQL and spreadsheets, but lacks experience in critical areas like ATS tools and reporting, and more complex SQL queries.',
-};
+type AnalyzeApiResponse =
+  | { success: true; data: FitResponse; error: null }
+  | { success: false; data: null; error: { code: string; message: string; details?: unknown } };
 
 const priorityToneMap: Record<NonNullable<MatchItem['priority']>, string> = {
   CRITICAL: 'bg-red-100 text-zinc-900 border-red-300',
   IMPORTANT: 'bg-amber-100 text-zinc-900 border-amber-300',
-  OPTIONAL: 'bg-blue-100 text-zinc-900 border-blue-300',
+  'NICE TO HAVE': 'bg-blue-100 text-zinc-900 border-blue-300',
 };
 
 export default function SampleResult() {
@@ -91,6 +41,8 @@ export default function SampleResult() {
     'Student project coordinator with Excel and basic SQL familiarity, strong attention to detail, and experience running repeatable processes.',
   );
   const [response, setResponse] = useState<FitResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const readinessVisual = useMemo(() => {
     const score = response?.readiness_score ?? 0;
@@ -101,9 +53,31 @@ export default function SampleResult() {
     return { tone: 'bg-emerald-500/85', label: 'STRONG FIT' };
   }, [response]);
 
-  const runSampleAnalysis = () => {
+  const runSampleAnalysis = async () => {
     if (!jdText.trim() || !candidateText.trim()) return;
-    setResponse(mockAiResponse);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jd: jdText,
+          skills: candidateText,
+        }),
+      });
+      const payload = (await res.json()) as AnalyzeApiResponse;
+      if (!payload.success) {
+        throw new Error(payload.error?.message || 'Failed to analyze skills.');
+      }
+      setResponse(payload.data);
+    } catch (err) {
+      setResponse(null);
+      setError(err instanceof Error ? err.message : 'Failed to analyze skills.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -151,11 +125,13 @@ export default function SampleResult() {
                     <button
                       type="button"
                       onClick={runSampleAnalysis}
+                      disabled={isLoading}
                       className="w-full sm:w-[220px] px-6 py-3 bg-white text-zinc-900 border border-black/12 rounded-sm font-semibold hover:bg-zinc-100 transition-colors"
                     >
-                      Run Analysis
+                      {isLoading ? 'Analyzing...' : 'Run Analysis'}
                     </button>
                   </div>
+                  {error ? <p className="pt-3 text-xs text-red-700">{error}</p> : null}
                 </div>
               </div>
             </motion.div>
