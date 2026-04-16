@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Filter, Download, MoreHorizontal, CheckCircle2, AlertCircle, Clock, ChevronRight, BarChart3, ListChecks, Target } from "lucide-react";
+import { Search, Plus, Filter, Download, MoreHorizontal, CheckCircle2, AlertCircle, Clock, ChevronRight, BarChart3, ListChecks, Target, User } from "lucide-react";
 import { buildAnalyzeEndpoint, requestDashboardAnalysis } from "./dashboardApi.js";
+import { useAuth } from "../lib/AuthContext";
 
 type MatchItem = {
   skill: string;
@@ -30,15 +31,20 @@ type AnalyzeApiResponse =
 
 function PriorityBadge({ priority }: { priority?: string }) {
   if (!priority) return null;
-  const styles = {
-    CRITICAL: "bg-red-50 text-red-700 border-red-200",
-    IMPORTANT: "bg-amber-50 text-amber-700 border-amber-200",
-    "NICE TO HAVE": "bg-blue-50 text-blue-700 border-blue-200",
-  }[priority] || "bg-slate-50 text-slate-600 border-slate-200";
+
+  const normalizedPriority = priority.toUpperCase().replace(/_/g, ' ');
+
+  const styles: Record<string, string> = {
+    'CRITICAL': "bg-red-50 text-red-700 border-red-200",
+    'IMPORTANT': "bg-amber-50 text-amber-700 border-amber-200",
+    'NICE TO HAVE': "bg-blue-50 text-blue-700 border-blue-200",
+  };
+
+  const currentStyle = styles[normalizedPriority] || "bg-slate-50 text-slate-600 border-slate-200";
 
   return (
-    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${styles}`}>
-      {priority}
+    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border whitespace-nowrap inline-block ${currentStyle}`}>
+      {normalizedPriority}
     </span>
   );
 }
@@ -49,7 +55,7 @@ function StatusBadge({ type }: { type: string }) {
     MODERATE: "text-amber-600 bg-amber-50 border-amber-100",
     WEAK: "text-red-600 bg-red-50 border-red-100",
   }[type] || "text-slate-600 bg-slate-50 border-slate-100";
-  
+
   return (
     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${styles}`}>
       {type}
@@ -58,11 +64,54 @@ function StatusBadge({ type }: { type: string }) {
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [jdText, setJdText] = useState("");
   const [candidateText, setCandidateText] = useState("");
   const [response, setResponse] = useState<FitResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'priority', direction: 'asc' });
+
+  const sortedResults = useMemo(() => {
+    if (!response) return [];
+
+    const allItems = [
+      ...response.strong_matches.map(m => ({ ...m, status: 'MATCH', priority: 'RESOLVED' as const })),
+      ...response.partial_matches.map(m => ({ ...m, status: 'GAP' }))
+    ];
+
+    const priorityOrder = { 'CRITICAL': 0, 'IMPORTANT': 1, 'NICE TO HAVE': 2, 'RESOLVED': 3 };
+
+    return [...allItems].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortConfig.key) {
+        case 'skill':
+          comparison = a.skill.localeCompare(b.skill);
+          break;
+        case 'priority':
+          comparison = (priorityOrder[a.priority as keyof typeof priorityOrder] ?? 99) -
+            (priorityOrder[b.priority as keyof typeof priorityOrder] ?? 99);
+          break;
+        case 'status':
+          comparison = a.status.localeCompare(b.status);
+          break;
+        case 'action':
+          comparison = (a.action || "").localeCompare(b.action || "");
+          break;
+      }
+
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  }, [response, sortConfig]);
+
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const runAnalysis = async () => {
     if (!jdText || !candidateText) {
@@ -97,7 +146,12 @@ export default function Dashboard() {
       {/* Action Bar */}
       <div className="h-12 border-b border-border-subtle bg-white flex items-center justify-between px-6 shrink-0">
         <div className="flex items-center gap-4">
-          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Workspace / Intelligence</h2>
+          <div className="flex items-center gap-2">
+            <User className="w-3.5 h-3.5 text-slate-400" />
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+              {user?.email?.split('@')[0]}'s Workspace
+            </h2>
+          </div>
           <div className="h-4 w-px bg-slate-200" />
           {response && (
             <div className="flex items-center gap-2">
@@ -110,7 +164,7 @@ export default function Dashboard() {
           <button className="enterprise-button-outline h-8 px-3 flex items-center gap-2 text-xs">
             <Download className="w-3.5 h-3.5" /> Export
           </button>
-          <button 
+          <button
             disabled={isLoading}
             onClick={runAnalysis}
             className="enterprise-button h-8 px-4 flex items-center gap-2 text-xs"
@@ -130,7 +184,6 @@ export default function Dashboard() {
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-slate-900">{response?.readiness_score ?? "0"}%</span>
-              <span className="text-[10px] text-emerald-600 font-bold">+4% vs avg</span>
             </div>
           </div>
           <div className="enterprise-card p-4 flex flex-col justify-between h-28">
@@ -166,7 +219,7 @@ export default function Dashboard() {
               <div className="border-b border-border-subtle px-4 py-3 bg-surface-off-white flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Analysis Input</span>
                 {response && (
-                   <button 
+                  <button
                     onClick={() => { setResponse(null); setJdText(""); setCandidateText(""); }}
                     className="text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase transition-colors"
                   >
@@ -256,63 +309,88 @@ export default function Dashboard() {
                           </span>
                         </div>
                       </div>
-                      <button className="text-slate-400 hover:text-slate-600">
-                        <Filter className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                          Sorting by {sortConfig.key} ({sortConfig.direction})
+                        </span>
+                      </div>
                     </div>
                     <div className="overflow-x-auto overflow-y-hidden">
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-slate-50/50 border-b border-border-subtle">
-                            <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Target Skill</th>
-                            <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fit Analysis</th>
-                            <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Actionable Step</th>
-                            <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Priority</th>
+                            <th
+                              onClick={() => requestSort('skill')}
+                              className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-900 transition-colors"
+                            >
+                              <div className="flex items-center gap-1">
+                                Target Skill
+                                {sortConfig.key === 'skill' && (sortConfig.direction === 'asc' ? <ChevronRight className="w-3 h-3 rotate-90" /> : <ChevronRight className="w-3 h-3 -rotate-90" />)}
+                              </div>
+                            </th>
+                            <th
+                              onClick={() => requestSort('status')}
+                              className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-900 transition-colors"
+                            >
+                              <div className="flex items-center gap-1">
+                                Fit Analysis
+                                {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? <ChevronRight className="w-3 h-3 rotate-90" /> : <ChevronRight className="w-3 h-3 -rotate-90" />)}
+                              </div>
+                            </th>
+                            <th
+                              onClick={() => requestSort('action')}
+                              className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-900 transition-colors"
+                            >
+                              <div className="flex items-center gap-1">
+                                Actionable Step
+                                {sortConfig.key === 'action' && (sortConfig.direction === 'asc' ? <ChevronRight className="w-3 h-3 rotate-90" /> : <ChevronRight className="w-3 h-3 -rotate-90" />)}
+                              </div>
+                            </th>
+                            <th
+                              onClick={() => requestSort('priority')}
+                              className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-900 transition-colors"
+                            >
+                              <div className="flex items-center gap-1">
+                                Priority
+                                {sortConfig.key === 'priority' && (sortConfig.direction === 'asc' ? <ChevronRight className="w-3 h-3 rotate-90" /> : <ChevronRight className="w-3 h-3 -rotate-90" />)}
+                              </div>
+                            </th>
                             <th className="px-4 py-3 text-right"></th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border-subtle">
-                          {response.strong_matches.map((item, idx) => (
-                            <tr key={`strong-${idx}`} className="group hover:bg-surface-off-white transition-colors">
+                          {sortedResults.map((item, idx) => (
+                            <tr key={`${item.skill}-${idx}`} className="group hover:bg-surface-off-white transition-colors">
                               <td className="px-4 py-3">
                                 <span className="text-xs font-bold text-slate-900">{item.skill}</span>
                               </td>
                               <td className="px-4 py-3">
-                                <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
-                                  <CheckCircle2 className="w-3.5 h-3.5" /> Strong Match
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className="text-xs text-slate-500">—</span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold border bg-slate-50 text-slate-400 border-slate-200 uppercase">Resolved</span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <MoreHorizontal className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 cursor-pointer" />
-                              </td>
-                            </tr>
-                          ))}
-                          {response.partial_matches.map((item, idx) => (
-                            <tr key={`partial-${idx}`} className="group hover:bg-surface-off-white transition-colors">
-                              <td className="px-4 py-3">
-                                <span className="text-xs font-bold text-slate-900">{item.skill}</span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium">
-                                    <AlertCircle className="w-3.5 h-3.5" /> Notable Gap
+                                {item.status === 'MATCH' ? (
+                                  <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Strong Match
                                   </div>
-                                  <p className="text-[10px] text-slate-500 leading-tight pr-4">
-                                    {item.gap_detail}
-                                  </p>
-                                </div>
+                                ) : (
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium">
+                                      <AlertCircle className="w-3.5 h-3.5" /> Notable Gap
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 leading-tight pr-4">
+                                      {(item as any).gap_detail}
+                                    </p>
+                                  </div>
+                                )}
                               </td>
                               <td className="px-4 py-3">
-                                <span className="text-xs text-slate-900 font-medium">"{item.action}"</span>
+                                <span className={item.status === 'MATCH' ? "text-xs text-slate-500" : "text-xs text-slate-900 font-medium leading-tight inline-block"}>
+                                  {item.status === 'MATCH' ? "—" : item.action}
+                                </span>
                               </td>
                               <td className="px-4 py-3">
-                                <PriorityBadge priority={item.priority} />
+                                {item.status === 'MATCH' ? (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold border bg-slate-50 text-slate-400 border-slate-200 uppercase">Resolved</span>
+                                ) : (
+                                  <PriorityBadge priority={(item as any).priority} />
+                                )}
                               </td>
                               <td className="px-4 py-3 text-right">
                                 <MoreHorizontal className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 cursor-pointer" />

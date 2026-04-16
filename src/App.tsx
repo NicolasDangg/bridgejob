@@ -9,6 +9,11 @@ import Contact from "./components/Contact";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
 import Accounts from "./components/Accounts";
+import Privacy from "./components/Privacy";
+import Terms from "./components/Terms";
+import Security from "./components/Security";
+import Billing from "./components/Billing";
+import Notifications from "./components/Notifications";
 import SampleResult from "./components/SampleResult";
 import { FeaturesShowcase } from "./components/FeaturesShowcase";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
@@ -117,9 +122,9 @@ function PageLayout({ children }: { children: ReactNode }) {
         <div className="container mx-auto max-w-7xl px-4 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-xs text-slate-500">© 2026 BridgeJob Career Intelligence. All rights reserved.</p>
           <div className="flex gap-6 text-xs text-slate-400">
-            <a href="#" className="hover:text-slate-600 transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-slate-600 transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-slate-600 transition-colors">Support</a>
+            <Link to="/privacy" className="hover:text-slate-600 transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
+            <Link to="/contact" className="hover:text-slate-600 transition-colors">Support</Link>
           </div>
         </div>
       </footer>
@@ -224,6 +229,32 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/security"
+              element={
+                <ProtectedRoute>
+                  <Security />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/billing"
+              element={
+                <ProtectedRoute>
+                  <Billing />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
           </Routes>
         </PageLayout>
       </AuthProvider>

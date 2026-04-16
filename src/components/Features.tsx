@@ -1,8 +1,11 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { BarChart2, ShieldCheck, Zap, Layers } from "lucide-react";
+import { useAuth } from "../lib/AuthContext";
 
 export default function Features() {
+  const { user } = useAuth();
+
   return (
     <div className="flex-1 bg-surface-off-white py-24 px-4 overflow-auto">
       <div className="max-w-5xl mx-auto space-y-16">
@@ -58,8 +61,8 @@ export default function Features() {
             Join thousands of professionals using BridgeJob to navigate their career with data-driven precision.
           </p>
           <div className="pt-2">
-            <Link to="/signup" className="enterprise-button h-11 px-8 text-sm">
-              Start Free Analysis
+            <Link to={user ? "/dashboard" : "/signup"} className="enterprise-button h-11 px-8 text-sm">
+              {user ? "Go to Dashboard" : "Start Free Analysis"}
             </Link>
           </div>
         </div>

@@ -1,4 +1,18 @@
+import { useAuth } from "../lib/AuthContext";
+import { useState, useEffect } from "react";
+
 export default function Contact() {
+  const { user } = useAuth();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    if (user) {
+      setFullName(user.user_metadata?.full_name || "");
+      setEmail(user.email || "");
+    }
+  }, [user]);
+
   return (
     <div className="flex-1 bg-surface-off-white flex items-center justify-center p-6 overflow-auto">
       <div className="w-full max-w-3xl space-y-12">
@@ -17,6 +31,9 @@ export default function Contact() {
                 <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Full Name</label>
                 <input
                   type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   className="enterprise-input"
                   placeholder="Professional name"
                 />
@@ -25,6 +42,9 @@ export default function Contact() {
                 <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Business Email</label>
                 <input
                   type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="enterprise-input"
                   placeholder="name@company.com"
                 />
@@ -33,6 +53,7 @@ export default function Contact() {
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Your Inquiry</label>
               <textarea
+                required
                 className="enterprise-input h-32 resize-none py-3"
                 placeholder="Describe your use case or platform feedback..."
               />

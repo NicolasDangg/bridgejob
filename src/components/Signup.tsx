@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { useAuth } from "../lib/AuthContext";
 
 export default function Signup() {
   const [email, setEmail] = useState("");
@@ -10,13 +11,34 @@ export default function Signup() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supabase) return;
-
     setLoading(true);
     setError(null);
+
+    // Dev mode: create mock user and auto-login
+    if (import.meta.env.DEV && !supabase) {
+      const mockUser = {
+        id: `user-${Date.now()}`,
+        email,
+        user_metadata: { full_name: fullName },
+        aud: 'authenticated',
+        role: 'authenticated',
+        created_at: new Date().toISOString()
+      };
+      setUser(mockUser as any);
+      setLoading(false);
+      navigate("/dashboard");
+      return;
+    }
+
+    if (!supabase) {
+      setError("Backend not configured.");
+      setLoading(false);
+      return;
+    }
 
     const { error } = await supabase.auth.signUp({
       email,

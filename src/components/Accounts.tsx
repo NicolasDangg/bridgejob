@@ -1,4 +1,5 @@
 import { useAuth } from "../lib/AuthContext";
+import { Link } from "react-router-dom";
 import { 
   User, 
   Settings, 
@@ -7,7 +8,8 @@ import {
   CreditCard, 
   ChevronRight,
   Mail,
-  Lock
+  Lock,
+  FileText
 } from "lucide-react";
 
 export default function Accounts() {
@@ -37,26 +39,34 @@ export default function Accounts() {
       title: "Security & Access",
       icon: Shield,
       items: [
-        { label: "Profile Credentials", value: user.email, sublabel: "Primary workspace email" },
-        { label: "Authentication", sublabel: "Two-factor and session management" },
-        { label: "Data Portability", sublabel: "Export your analysis history" }
+        { label: "Profile Credentials", value: user.email, sublabel: "Primary workspace email", path: "/security" },
+        { label: "Authentication", sublabel: "Two-factor and session management", path: "/security" },
+        { label: "Data Portability", sublabel: "Export your analysis history", path: "/security" }
       ]
     },
     {
       title: "Billing & Subscription",
       icon: CreditCard,
       items: [
-        { label: "Current Tier", value: "Starter Plan", sublabel: "Standard individual access" },
-        { label: "Payment Method", sublabel: "Manage cards and billing address" },
-        { label: "Invoice Archive", sublabel: "Review past transaction history" }
+        { label: "Current Tier", value: "Starter Plan", sublabel: "Standard individual access", path: "/billing" },
+        { label: "Payment Method", sublabel: "Manage cards and billing address", path: "/billing" },
+        { label: "Invoice Archive", sublabel: "Review past transaction history", path: "/billing" }
+      ]
+    },
+    {
+      title: "Legal & Compliance",
+      icon: FileText,
+      items: [
+        { label: "Privacy Policy", sublabel: "Data handling and safety", path: "/privacy" },
+        { label: "Terms of Service", sublabel: "Usage agreements and rules", path: "/terms" }
       ]
     },
     {
       title: "Preferences",
       icon: Settings,
       items: [
-        { label: "Notifications", sublabel: "Manage email and system alerts" },
-        { label: "Region & Language", sublabel: "Configure localization settings" }
+        { label: "Notifications", sublabel: "Manage email and system alerts", path: "/notifications" },
+        { label: "Region & Language", sublabel: "Configure localization settings", path: "#" }
       ]
     }
   ];
@@ -90,8 +100,9 @@ export default function Accounts() {
               <div className="flex-1 p-2">
                 <div className="space-y-1">
                   {section.items.map((item) => (
-                    <button
+                    <Link
                       key={item.label}
+                      to={item.path || "#"}
                       className="w-full flex items-center justify-between p-3 rounded hover:bg-surface-off-white transition-colors group text-left"
                     >
                       <div className="space-y-0.5">
@@ -106,7 +117,7 @@ export default function Accounts() {
                         )}
                         <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-900 transition-colors" />
                       </div>
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -118,9 +129,9 @@ export default function Accounts() {
             <h3 className="text-white text-lg font-bold tracking-tight">Need assistance?</h3>
             <p className="text-slate-400 text-xs leading-relaxed font-medium">Our support team is available 24/7 for technical queries and account management help.</p>
             <div className="pt-2">
-              <button className="h-9 px-6 bg-white text-slate-900 text-[11px] font-bold uppercase tracking-widest rounded hover:bg-slate-100 transition-colors">
+              <Link to="/contact" className="inline-block h-9 px-6 bg-white text-slate-900 text-[11px] font-bold uppercase tracking-widest rounded hover:bg-slate-100 transition-colors leading-9 text-center">
                 Contact Support
-              </button>
+              </Link>
             </div>
           </div>
         </div>

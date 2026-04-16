@@ -1,8 +1,11 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Check } from "lucide-react";
+import { useAuth } from "../lib/AuthContext";
 
 export default function Pricing() {
+  const { user } = useAuth();
+
   return (
     <div className="flex-1 bg-surface-off-white py-24 px-4 overflow-auto">
       <div className="max-w-5xl mx-auto space-y-16">
@@ -21,8 +24,10 @@ export default function Pricing() {
               price: '$0',
               description: 'For individuals starting their search.',
               points: ['3 analysis runs / mo', 'Basic fit summaries', 'Gap identification'],
-              cta: 'Get Started',
+              cta: user ? 'Current Plan' : 'Get Started',
               featured: false,
+              path: user ? '/accounts' : '/signup',
+              disabled: !!user
             },
             {
               name: 'Growth',
@@ -30,8 +35,9 @@ export default function Pricing() {
               period: '/mo',
               description: 'Most popular for active job seekers.',
               points: ['Unlimited analysis', 'Saved history', 'Detailed bridge roadmaps', 'PDF Exports'],
-              cta: 'Subscribe to Growth',
+              cta: user ? 'Manage Subscription' : 'Subscribe to Growth',
               featured: true,
+              path: user ? '/billing' : '/signup'
             },
             {
               name: 'Enterprise',
@@ -40,6 +46,7 @@ export default function Pricing() {
               points: ['Team workspaces', 'Custom role templates', 'Match API access', 'Priority support'],
               cta: 'Contact Sales',
               featured: false,
+              path: '/contact'
             },
           ].map((plan) => (
             <div
@@ -70,10 +77,10 @@ export default function Pricing() {
               </div>
               <div className="p-6 bg-surface-off-white border-t border-border-subtle">
                 <Link
-                  to="/signup"
+                  to={plan.path}
                   className={`w-full h-10 flex items-center justify-center text-xs font-bold ${
                     plan.featured ? 'enterprise-button' : 'enterprise-button-outline'
-                  }`}
+                  } ${(plan as any).disabled ? 'opacity-50 cursor-default pointer-events-none' : ''}`}
                 >
                   {plan.cta}
                 </Link>
