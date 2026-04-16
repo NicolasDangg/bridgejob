@@ -14,7 +14,11 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
 
 export function buildAuthRedirectUrl(path = '/dashboard') {
   if (typeof window === 'undefined') return undefined;
-  const baseUrl = import.meta.env.VITE_SITE_URL || import.meta.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+  
+  // Always use window.location.origin as primary source (captures current domain)
+  // This ensures correct redirect on Vercel and other deployments
+  const baseUrl = window.location.origin;
+  
   return new URL(path, baseUrl).toString();
 }
 
