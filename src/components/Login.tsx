@@ -1,113 +1,156 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { buildAuthRedirectUrl, supabase } from '../lib/supabase';
-import { useAuth } from '../lib/AuthContext';
+import { useState, type FormEvent } from "react";
+import { motion } from "framer-motion";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../lib/AuthContext";
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     setLoading(true);
     setError(null);
-    setSent(false);
+    setStatusMessage(null);
 
-    if (import.meta.env.DEV) {
-      try {
-        const { testUser } = await import('../lib/testCredentials.json');
-        if (email === testUser.email) {
-          const mockUser = {
-            id: 'test-user-id',
-            email: testUser.email,
-            user_metadata: { full_name: testUser.fullName, plan: 'free' },
-            aud: 'authenticated',
-            role: 'authenticated',
-            created_at: new Date().toISOString(),
-          };
-          setUser(mockUser as any);
-          setLoading(false);
-          navigate('/dashboard');
+    try {
+      // Hard-coded Test Credentials Bypass (DEV ONLY)
+      if (import.meta.env.DEV) {
+        try {
+          const { testUser } = await import('../lib/testCredentials.json');
+          if (email === testUser.email && password === testUser.password) {
+            const mockUser = {
+              id: 'test-user-id',
+              email: testUser.email,
+              user_metadata: { full_name: testUser.fullName },
+              aud: 'authenticated',
+              role: 'authenticated',
+              created_at: new Date().toISOString(),
+            };
+
+            setUser(mockUser as any);
+            navigate("/dashboard");
+            return;
+          }
+        } catch (e) {
+          console.log("No test credentials file found, proceeding with Supabase.");
+        }
+      }
+
+      if (!supabase) {
+        setError("Supabase not configured.");
+        return;
+      }
+
+      if (password.trim()) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          setError(error.message);
           return;
         }
-      } catch {
-        console.log('No test credentials file found, continuing with Supabase magic link flow.');
+
+        navigate("/dashboard");
+        return;
       }
-    }
 
-    if (!supabase) {
-      setError('Supabase not configured.');
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+      });
+
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      setStatusMessage("Check your email for the magic link to sign in.");
+    } finally {
       setLoading(false);
-      return;
     }
+  };
 
-    const redirectTo = buildAuthRedirectUrl('/dashboard');
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: redirectTo ? { emailRedirectTo: redirectTo } : undefined,
-    });
-
-    if (error) {
-      setError(error.message);
-    } else {
-      setSent(true);
-    }
-
-    setLoading(false);
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6 },
+    },
   };
 
   return (
-    <div className="flex-1 bg-surface-white flex items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center space-y-2">
-          <div className="w-10 h-10 bg-slate-900 rounded-md flex items-center justify-center text-white text-sm font-bold mx-auto mb-4">BJ</div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Sign in to BridgeJob</h1>
-          <p className="text-sm text-slate-500 font-medium">We’ll email you a magic link to continue.</p>
+    <div className="flex items-center justify-center min-h-[calc(100vh-6rem)] p-6">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="w-full max-w-md rounded-[2.5rem] border border-black/10 bg-white/70 backdrop-blur-md p-10 shadow-[0_12px_48px_rgba(0,0,0,0.08)]"
+      >
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-sans font-extrabold text-zinc-900 tracking-tight">Welcome Back</h1>
+          <p className="mt-2 text-zinc-700">Enter your details to access your dashboard.</p>
         </div>
 
-        <div className="enterprise-card p-6 bg-white space-y-5">
-          {sent ? (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-              Magic link sent. Check your inbox and open the link to continue.
+        <form className="space-y-6" onSubmit={handleLogin}>
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-700 ml-1">Email</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-2xl border border-black/10 bg-white/50 px-5 py-4 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+              placeholder="you@domain.com"
+              autoComplete="email"
+            />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between ml-1">
+              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-700">Password</label>
+              <Link to="/login" className="text-[10px] font-bold text-zinc-600 hover:text-zinc-900">Forgot?</Link>
             </div>
-          ) : null}
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-2xl border border-black/10 bg-white/50 px-5 py-4 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+              placeholder="Leave blank for a magic link"
+              autoComplete="current-password"
+            />
+            <p className="ml-1 text-xs text-zinc-500">Leave blank to receive a magic link instead.</p>
+          </div>
 
-          <form className="space-y-4" onSubmit={handleLogin}>
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Email Address</label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="enterprise-input"
-                placeholder="name@company.com"
-              />
-            </div>
+          {error && <p className="text-xs text-red-600 ml-1">{error}</p>}
+          {statusMessage && <p className="text-xs text-emerald-700 ml-1">{statusMessage}</p>}
 
-            {error && <p className="text-[11px] text-red-600 font-medium">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 rounded-full bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800 transition-all shadow-xl shadow-black/20 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+          >
+            {loading ? "Signing In..." : "Sign In"}
+          </button>
+        </form>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full enterprise-button h-10 mt-2"
-            >
-              {loading ? 'Sending Link...' : 'Send Magic Link'}
-            </button>
-          </form>
+        <div className="mt-10 text-center">
+          <p className="text-sm text-zinc-700">
+            Don't have an account?{" "}
+            <Link to="/signup" className="font-bold text-zinc-900 hover:underline">
+              Sign up
+            </Link>
+          </p>
         </div>
-
-        <p className="text-center text-xs text-slate-500 font-medium">
-          Don’t have an account?{' '}
-          <Link to="/signup" className="text-slate-900 font-bold hover:underline underline-offset-4 decoration-slate-300">
-            Create one here
-          </Link>
-        </p>
-      </div>
+      </motion.div>
     </div>
   );
 }
