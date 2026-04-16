@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/AuthContext";
@@ -14,16 +13,13 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setLoading(true);
     setError(null);
 
-    // Hard-coded Test Credentials Bypass (DEV ONLY)
     if (import.meta.env.DEV) {
       try {
         const { testUser } = await import('../lib/testCredentials.json');
         if (email === testUser.email && password === testUser.password) {
-          // Mock a user object
           const mockUser = {
             id: 'test-user-id',
             email: testUser.email,
@@ -32,16 +28,12 @@ export default function Login() {
             role: 'authenticated',
             created_at: new Date().toISOString()
           };
-          
-          // Use the manual setter to update AuthContext
           setUser(mockUser as any);
-          
           setLoading(false);
           navigate("/dashboard");
           return;
         }
       } catch (e) {
-        // JSON file might not exist or be ignored
         console.log("No test credentials file found, proceeding with Supabase.");
       }
     }
@@ -66,75 +58,62 @@ export default function Login() {
     }
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.6 },
-    },
-  };
-
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-6rem)] p-6">
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="w-full max-w-md rounded-[2.5rem] border border-black/10 bg-white/70 backdrop-blur-md p-10 shadow-[0_12px_48px_rgba(0,0,0,0.08)]"
-      >
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-sans font-extrabold text-zinc-900 tracking-tight">Welcome Back</h1>
-          <p className="mt-2 text-zinc-700">Enter your details to access your dashboard.</p>
+    <div className="flex-1 bg-surface-white flex items-center justify-center p-6">
+      <div className="w-full max-w-sm space-y-8">
+        <div className="text-center space-y-2">
+          <div className="w-10 h-10 bg-slate-900 rounded-md flex items-center justify-center text-white text-sm font-bold mx-auto mb-4">BJ</div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Sign in to BridgeJob</h1>
+          <p className="text-sm text-slate-500 font-medium">Professional Career Intelligence Workspace</p>
         </div>
 
-        <form className="space-y-6" onSubmit={handleLogin}>
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-700 ml-1">Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-2xl border border-black/10 bg-white/50 px-5 py-4 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
-              placeholder="you@domain.com"
-            />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between ml-1">
-              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-700">Password</label>
-              <Link to="/login" className="text-[10px] font-bold text-zinc-600 hover:text-zinc-900">Forgot?</Link>
+        <div className="enterprise-card p-6 bg-white">
+          <form className="space-y-4" onSubmit={handleLogin}>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Email Address</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="enterprise-input"
+                placeholder="name@company.com"
+              />
             </div>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-2xl border border-black/10 bg-white/50 px-5 py-4 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
-              placeholder="••••••••"
-            />
-          </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Password</label>
+                <Link to="/login" className="text-[11px] font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-widest">Forgot?</Link>
+              </div>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="enterprise-input"
+                placeholder="••••••••"
+              />
+            </div>
 
-          {error && <p className="text-xs text-red-600 ml-1">{error}</p>}
+            {error && <p className="text-[11px] text-red-600 font-medium">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 rounded-full bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800 transition-all shadow-xl shadow-black/20 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
-          >
-            {loading ? "Signing In..." : "Sign In"}
-          </button>
-        </form>
-
-        <div className="mt-10 text-center">
-          <p className="text-sm text-zinc-700">
-            Don't have an account?{" "}
-            <Link to="/signup" className="font-bold text-zinc-900 hover:underline">
-              Sign up
-            </Link>
-          </p>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full enterprise-button h-10 mt-2"
+            >
+              {loading ? "Signing In..." : "Log in"}
+            </button>
+          </form>
         </div>
-      </motion.div>
+
+        <p className="text-center text-xs text-slate-500 font-medium">
+          Don't have an account?{" "}
+          <Link to="/signup" className="text-slate-900 font-bold hover:underline underline-offset-4 decoration-slate-300">
+            Create an account
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

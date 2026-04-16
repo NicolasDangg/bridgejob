@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, Plus, Filter, Download, MoreHorizontal, CheckCircle2, AlertCircle, Clock, ChevronRight, BarChart3, ListChecks, Target } from "lucide-react";
 import { buildAnalyzeEndpoint, requestDashboardAnalysis } from "./dashboardApi.js";
 
 type MatchItem = {
@@ -28,11 +28,34 @@ type AnalyzeApiResponse =
   | { success: true; data: FitResponse; error: null }
   | { success: false; data: null; error: { code: string; message: string; details?: unknown } };
 
-const priorityToneMap: Record<NonNullable<MatchItem["priority"]>, string> = {
-  CRITICAL: "bg-red-100 text-zinc-900 border-red-300",
-  IMPORTANT: "bg-amber-100 text-zinc-900 border-amber-300",
-  "NICE TO HAVE": "bg-blue-100 text-zinc-900 border-blue-300",
-};
+function PriorityBadge({ priority }: { priority?: string }) {
+  if (!priority) return null;
+  const styles = {
+    CRITICAL: "bg-red-50 text-red-700 border-red-200",
+    IMPORTANT: "bg-amber-50 text-amber-700 border-amber-200",
+    "NICE TO HAVE": "bg-blue-50 text-blue-700 border-blue-200",
+  }[priority] || "bg-slate-50 text-slate-600 border-slate-200";
+
+  return (
+    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${styles}`}>
+      {priority}
+    </span>
+  );
+}
+
+function StatusBadge({ type }: { type: string }) {
+  const styles = {
+    STRONG: "text-emerald-600 bg-emerald-50 border-emerald-100",
+    MODERATE: "text-amber-600 bg-amber-50 border-amber-100",
+    WEAK: "text-red-600 bg-red-50 border-red-100",
+  }[type] || "text-slate-600 bg-slate-50 border-slate-100";
+  
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${styles}`}>
+      {type}
+    </span>
+  )
+}
 
 export default function Dashboard() {
   const [jdText, setJdText] = useState("");
@@ -40,29 +63,6 @@ export default function Dashboard() {
   const [response, setResponse] = useState<FitResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.6, staggerChildren: 0.1 },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0 },
-  };
-
-  const readinessVisual = useMemo(() => {
-    const score = response?.readiness_score ?? 0;
-    if (score <= 20) return { tone: "bg-red-500/80", label: "LOW FIT" };
-    if (score <= 40) return { tone: "bg-orange-500/80", label: "BUILDING FIT" };
-    if (score <= 60) return { tone: "bg-amber-500/80", label: "MODERATE FIT" };
-    if (score <= 80) return { tone: "bg-lime-500/80", label: "GOOD FIT" };
-    return { tone: "bg-emerald-500/85", label: "STRONG FIT" };
-  }, [response]);
 
   const runAnalysis = async () => {
     if (!jdText || !candidateText) {
@@ -93,203 +93,261 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col items-center min-h-[calc(100vh-6rem)] p-6 space-y-12">
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="w-full max-w-6xl space-y-8"
-      >
-        <div className="flex flex-wrap items-start justify-between gap-6">
-          <motion.div variants={itemVariants}>
-            <p className="text-[10px] uppercase tracking-[0.3em] font-semibold text-zinc-700 mb-2">Dashboard</p>
-            <h1 className="text-4xl md:text-5xl font-sans font-extrabold text-zinc-900 leading-tight tracking-tight">Career Intelligence Hub</h1>
-            <p className="mt-4 text-zinc-800 max-w-2xl leading-relaxed">
-              Track analysis history, monitor readiness trends, and prioritize the highest-impact gap closures.
-            </p>
-          </motion.div>
+    <div className="flex-1 flex flex-col min-h-0 bg-surface-off-white">
+      {/* Action Bar */}
+      <div className="h-12 border-b border-border-subtle bg-white flex items-center justify-between px-6 shrink-0">
+        <div className="flex items-center gap-4">
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Workspace / Intelligence</h2>
+          <div className="h-4 w-px bg-slate-200" />
+          {response && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-slate-900">{response.job_title}</span>
+              <StatusBadge type={response.overall_fit} />
+            </div>
+          )}
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            { label: "Latest Readiness", value: response ? `${response.readiness_score}%` : "50%", note: "From your most recent run" },
-            { label: "Critical Gaps", value: response ? response.partial_matches.filter(m => m.priority === "CRITICAL").length.toString() : "2", note: "Need immediate action" },
-            { label: "Bridge Steps", value: response ? response.bridge_steps.length.toString() : "2", note: "Recommended actions" },
-          ].map((item) => (
-            <motion.div
-              key={item.label}
-              variants={itemVariants}
-              className="rounded-2xl border border-black/10 bg-white/70 backdrop-blur-md p-6 shadow-[0_8px_32px_rgba(0,0,0,0.06)]"
-            >
-              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-semibold">{item.label}</p>
-              <p className="text-4xl font-bold text-zinc-900 mt-4">{item.value}</p>
-              <p className="text-sm text-zinc-700 mt-2">{item.note}</p>
-            </motion.div>
-          ))}
+        <div className="flex items-center gap-2">
+          <button className="enterprise-button-outline h-8 px-3 flex items-center gap-2 text-xs">
+            <Download className="w-3.5 h-3.5" /> Export
+          </button>
+          <button 
+            disabled={isLoading}
+            onClick={runAnalysis}
+            className="enterprise-button h-8 px-4 flex items-center gap-2 text-xs"
+          >
+            {isLoading ? "Running..." : "Run Analysis"}
+          </button>
         </div>
+      </div>
 
-        {/* Real Analyzer Section */}
-        <motion.div
-          variants={itemVariants}
-          className="rounded-3xl border border-black/10 bg-white/75 backdrop-blur-md p-8 shadow-[0_12px_40px_rgba(0,0,0,0.08)]"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-6 mb-8">
-            <h2 className="text-2xl font-sans font-extrabold text-zinc-900 tracking-tight">Live Fit Analyzer</h2>
-            {response && (
-              <button
-                onClick={() => { setResponse(null); setJdText(""); setCandidateText(""); }}
-                className="text-xs font-bold text-zinc-600 hover:text-zinc-900 underline underline-offset-4"
-              >
-                Clear Results
-              </button>
-            )}
+      <div className="flex-1 overflow-auto p-6 space-y-6 max-w-7xl mx-auto w-full">
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 shrink-0">
+          <div className="enterprise-card p-4 flex flex-col justify-between h-28">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Readiness Score</span>
+              <BarChart3 className="w-4 h-4 text-slate-400" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-slate-900">{response?.readiness_score ?? "0"}%</span>
+              <span className="text-[10px] text-emerald-600 font-bold">+4% vs avg</span>
+            </div>
           </div>
+          <div className="enterprise-card p-4 flex flex-col justify-between h-28">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Critical Gaps</span>
+              <AlertCircle className="w-4 h-4 text-slate-400" />
+            </div>
+            <div className="text-3xl font-bold text-slate-900">
+              {response?.partial_matches.filter(m => m.priority === "CRITICAL").length ?? "0"}
+            </div>
+          </div>
+          <div className="enterprise-card p-4 flex flex-col justify-between h-28">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bridge Steps</span>
+              <ListChecks className="w-4 h-4 text-slate-400" />
+            </div>
+            <div className="text-3xl font-bold text-slate-900">{response?.bridge_steps.length ?? "0"}</div>
+          </div>
+          <div className="enterprise-card p-4 flex flex-col justify-between h-28">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Target Level</span>
+              <Target className="w-4 h-4 text-slate-400" />
+            </div>
+            <div className="text-sm font-bold text-slate-900 truncate">Senior Staff Engineer</div>
+          </div>
+        </div>
 
-          <AnimatePresence mode="wait">
-            {!response ? (
-              <motion.div
-                key="inputs"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="space-y-6"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-700 ml-1">Job Description</label>
-                    <textarea
-                      value={jdText}
-                      onChange={(e) => setJdText(e.target.value)}
-                      className="w-full h-48 rounded-2xl border border-black/10 bg-white/50 px-5 py-4 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all text-sm leading-relaxed"
-                      placeholder="Paste the full JD requirements here..."
-                    />
-                  </div>
-                  <div className="space-y-3">
-                    <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-700 ml-1">Your Experience</label>
-                    <textarea
-                      value={candidateText}
-                      onChange={(e) => setCandidateText(e.target.value)}
-                      className="w-full h-48 rounded-2xl border border-black/10 bg-white/50 px-5 py-4 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all text-sm leading-relaxed"
-                      placeholder="Paste your resume or key experience points..."
-                    />
-                  </div>
-                </div>
-                {error && <p className="text-xs font-medium text-red-600 ml-1">{error}</p>}
-                <div className="flex justify-center">
-                  <button
-                    onClick={runAnalysis}
-                    disabled={isLoading}
-                    className="px-12 py-4 rounded-full bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800 transition-all shadow-xl shadow-black/20 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+        {/* Main Content Area */}
+        <div className="grid grid-cols-12 gap-6 items-start">
+          {/* Left Column: Input + Summary */}
+          <div className="col-span-12 lg:col-span-4 space-y-6">
+            <div className="enterprise-card">
+              <div className="border-b border-border-subtle px-4 py-3 bg-surface-off-white flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Analysis Input</span>
+                {response && (
+                   <button 
+                    onClick={() => { setResponse(null); setJdText(""); setCandidateText(""); }}
+                    className="text-[10px] font-bold text-slate-400 hover:text-slate-600 uppercase transition-colors"
                   >
-                    {isLoading ? "AI Analysis in Progress..." : "Run AI Analysis"}
+                    Reset
                   </button>
+                )}
+              </div>
+              <div className="p-4 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-600">Job Description</label>
+                  <textarea
+                    value={jdText}
+                    onChange={(e) => setJdText(e.target.value)}
+                    className="enterprise-input h-32 resize-none leading-relaxed"
+                    placeholder="Paste JD requirements..."
+                  />
                 </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="results"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-8"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-6">
-                  <div className="flex-1 min-w-[300px]">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-bold mb-1">Target Role</p>
-                    <h3 className="text-3xl font-sans font-extrabold text-zinc-900 tracking-tight">{response.job_title}</h3>
-                  </div>
-                  <div className="w-full lg:max-w-[420px]">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-bold mb-2">{readinessVisual.label}</p>
-                    <div className="relative h-10 rounded-xl border border-black/10 overflow-hidden bg-white/50">
-                      <div className="absolute inset-0 grid grid-cols-5">
-                        <div className="bg-red-200/40" />
-                        <div className="bg-orange-200/40" />
-                        <div className="bg-amber-200/40" />
-                        <div className="bg-lime-200/40" />
-                        <div className="bg-emerald-200/40" />
-                      </div>
-                      <div
-                        className={`absolute left-0 top-0 h-full ${readinessVisual.tone}`}
-                        style={{ width: `${response.readiness_score}%` }}
-                      />
-                      <div
-                        className="absolute top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-900 bg-white border border-black/10 px-3 py-1 rounded-full shadow-sm"
-                        style={{ left: `clamp(12px, calc(${response.readiness_score}% - 22px), calc(100% - 62px))` }}
-                      >
-                        {response.readiness_score}%
-                      </div>
-                    </div>
-                  </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-600">Experience Profile</label>
+                  <textarea
+                    value={candidateText}
+                    onChange={(e) => setCandidateText(e.target.value)}
+                    className="enterprise-input h-32 resize-none leading-relaxed"
+                    placeholder="Paste resume or skills..."
+                  />
                 </div>
+                {error && <p className="text-[11px] text-red-600 font-medium">{error}</p>}
+              </div>
+            </div>
 
-                <div className="rounded-2xl bg-white/60 border border-black/5 p-6">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-bold mb-2">Overall Summary</p>
-                  <p className="text-zinc-800 leading-relaxed text-sm">{response.overall_summary}</p>
+            {response && (
+              <div className="enterprise-card">
+                <div className="border-b border-border-subtle px-4 py-3 bg-surface-off-white flex items-center">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Analyst Summary</span>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {response.partial_matches.map((match, index) => (
-                    <div key={index} className="rounded-2xl border border-black/5 bg-white/60 p-6 flex flex-col space-y-4">
-                      <div className="space-y-2">
-                        <h4 className="font-bold text-zinc-900 text-sm leading-tight">{match.skill}</h4>
-                        {match.priority && (
-                          <span className={`inline-block text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${priorityToneMap[match.priority]}`}>
-                            {match.priority}
-                          </span>
-                        )}
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-[9px] uppercase tracking-[0.1em] text-zinc-600 font-bold">Gap</p>
-                        <p className="text-zinc-800 text-[13px] leading-relaxed">{match.gap_detail}</p>
-                      </div>
-                      <div className="space-y-1 mt-auto pt-2 border-t border-black/5">
-                        <p className="text-[9px] uppercase tracking-[0.1em] text-zinc-600 font-bold">Action</p>
-                        <p className="text-zinc-900 text-[13px] leading-relaxed font-medium">"{match.action}"</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="rounded-2xl border border-black/5 bg-zinc-900/5 p-6">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-bold mb-4">Strategic Roadmap</p>
-                  <div className="space-y-3">
-                    {response.bridge_steps.map((step, index) => (
-                      <div key={index} className="flex items-start gap-3 bg-white/80 p-4 rounded-xl border border-black/5 shadow-sm">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-zinc-900 text-white text-[10px] flex items-center justify-center font-bold">
-                          {index + 1}
-                        </span>
-                        <p className="text-sm text-zinc-900 leading-relaxed">{step}</p>
-                      </div>
-                    ))}
+                <div className="p-4">
+                  <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                    {response.overall_summary}
+                  </p>
+                  <div className="mt-4 pt-4 border-t border-border-subtle flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reported 2 mins ago</span>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
-        </motion.div>
-
-        <motion.div
-          variants={itemVariants}
-          className="rounded-3xl border border-black/10 bg-white/75 backdrop-blur-md p-8 shadow-[0_12px_40px_rgba(0,0,0,0.08)]"
-        >
-          <h2 className="text-2xl font-sans font-extrabold text-zinc-900 tracking-tight">Next Focus Sprint</h2>
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="rounded-2xl bg-white/50 border border-black/5 p-6 hover:bg-white/80 transition-colors">
-              <p className="font-bold text-zinc-900 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-zinc-900 text-white text-[10px] flex items-center justify-center">1</span>
-                SQL Skill Upgrade
-              </p>
-              <p className="mt-3 text-sm text-zinc-800 leading-relaxed">Complete one fundamentals module and solve five practice queries.</p>
-            </div>
-            <div className="rounded-2xl bg-white/50 border border-black/5 p-6 hover:bg-white/80 transition-colors">
-              <p className="font-bold text-zinc-900 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-zinc-900 text-white text-[10px] flex items-center justify-center">2</span>
-                ATS Familiarity
-              </p>
-              <p className="mt-3 text-sm text-zinc-800 leading-relaxed">Watch a Workday or BambooHR tutorial and document key reporting workflows.</p>
-            </div>
           </div>
-        </motion.div>
-      </motion.div>
+
+          {/* Right Column: Comparison Table + Steps */}
+          <div className="col-span-12 lg:col-span-8 space-y-6">
+            <AnimatePresence mode="wait">
+              {!response ? (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="enterprise-card flex flex-col items-center justify-center p-24 text-center space-y-4 bg-white"
+                >
+                  <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
+                    <Search className="w-6 h-6 text-slate-300" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-slate-900">No active analysis</h3>
+                    <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
+                      Enter job requirements and your professional experience on the left to generate a readiness report.
+                    </p>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="results"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="space-y-6"
+                >
+                  {/* Comparison Table */}
+                  <div className="enterprise-card">
+                    <div className="border-b border-border-subtle px-4 py-3 bg-surface-off-white flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Skill Comparison & Mapping</span>
+                        <div className="flex gap-2">
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" /> Matches
+                          </span>
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-red-600">
+                            <span className="w-2 h-2 rounded-full bg-red-500" /> Gaps
+                          </span>
+                        </div>
+                      </div>
+                      <button className="text-slate-400 hover:text-slate-600">
+                        <Filter className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="overflow-x-auto overflow-y-hidden">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/50 border-b border-border-subtle">
+                            <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Target Skill</th>
+                            <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fit Analysis</th>
+                            <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Actionable Step</th>
+                            <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Priority</th>
+                            <th className="px-4 py-3 text-right"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-subtle">
+                          {response.strong_matches.map((item, idx) => (
+                            <tr key={`strong-${idx}`} className="group hover:bg-surface-off-white transition-colors">
+                              <td className="px-4 py-3">
+                                <span className="text-xs font-bold text-slate-900">{item.skill}</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> Strong Match
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-xs text-slate-500">—</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold border bg-slate-50 text-slate-400 border-slate-200 uppercase">Resolved</span>
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <MoreHorizontal className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 cursor-pointer" />
+                              </td>
+                            </tr>
+                          ))}
+                          {response.partial_matches.map((item, idx) => (
+                            <tr key={`partial-${idx}`} className="group hover:bg-surface-off-white transition-colors">
+                              <td className="px-4 py-3">
+                                <span className="text-xs font-bold text-slate-900">{item.skill}</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-1.5 text-xs text-red-600 font-medium">
+                                    <AlertCircle className="w-3.5 h-3.5" /> Notable Gap
+                                  </div>
+                                  <p className="text-[10px] text-slate-500 leading-tight pr-4">
+                                    {item.gap_detail}
+                                  </p>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-xs text-slate-900 font-medium">"{item.action}"</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <PriorityBadge priority={item.priority} />
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <MoreHorizontal className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 cursor-pointer" />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Strategic Roadmap */}
+                  <div className="enterprise-card">
+                    <div className="border-b border-border-subtle px-4 py-3 bg-surface-off-white flex items-center">
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Strategic Roadmap</span>
+                    </div>
+                    <div className="p-4 space-y-4">
+                      {response.bridge_steps.map((step, idx) => (
+                        <div key={idx} className="flex gap-4 group">
+                          <div className="shrink-0 w-6 h-6 rounded bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                            0{idx + 1}
+                          </div>
+                          <div className="flex-1 pb-4 border-b border-slate-100 group-last:border-0">
+                            <p className="text-xs text-slate-900 font-medium leading-relaxed">{step}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

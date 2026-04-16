@@ -1,0 +1,76 @@
+.marquee {
+    --marquee-gap: 72px;
+    --marquee-speed: 35s;
+    display: flex;
+    overflow: hidden;
+    gap: var(--marquee-gap);
+    padding: 40px 0;
+}
+
+.marquee__group {
+    display: flex;
+    gap: var(--marquee-gap);
+    flex-shrink: 0;
+    align-items: center;
+    animation: marquee-scroll var(--marquee-speed) linear infinite;
+}
+
+@keyframes marquee-scroll {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(calc(-100% - var(--marquee-gap)));
+    }
+}
+
+/* Pause on hover */
+.marquee:hover .marquee__group {
+    animation-play-state: paused;
+}
+
+/* Reverse direction modifier */
+.marquee--reverse .marquee__group {
+    animation-direction: reverse;
+}
+
+/* Speed modifiers */
+.marquee--slow {
+    --marquee-speed: 50s;
+}
+
+.marquee--fast {
+    --marquee-speed: 15s;
+}
+
+/* Logo items */
+.marquee .logo-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.marquee .logo-item svg,
+.marquee .logo-item img {
+    width: 58px;
+    height: 58px;
+    flex-shrink: 0;
+    filter: grayscale(1) opacity(0.3);
+    transition: filter 0.4s ease, transform 0.4s ease;
+}
+
+/* Center spotlight — JS toggles this class */
+.marquee .logo-item.is-center svg,
+.marquee .logo-item.is-center img {
+    filter: grayscale(0) opacity(1);
+    transform: scale(1.25);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .marquee__group {
+        animation-play-state: paused;
+    }
+}
