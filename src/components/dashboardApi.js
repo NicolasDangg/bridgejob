@@ -1,12 +1,7 @@
-function isJsonResponse(response) {
-  const contentType = response.headers?.get?.('content-type') ?? '';
-  return contentType.toLowerCase().includes('application/json');
-}
-
 function normalizeBaseUrl(baseUrl) {
   if (!baseUrl) return '';
 
-  return baseUrl.replace(/\/+$/, '');
+  return baseUrl.replace(//+$/, '');
 }
 
 export function buildAnalyzeEndpoint(baseUrl) {
@@ -20,10 +15,10 @@ export function buildAnalyzeEndpoint(baseUrl) {
   }
 
   if (normalized.endsWith('/api')) {
-    return `${normalized}/analyze`;
+    return normalized + '/analyze';
   }
 
-  return `${normalized}/api/analyze`;
+  return normalized + '/api/analyze';
 }
 
 async function requestOnce(fetchFn, endpoint, input) {
@@ -39,14 +34,34 @@ async function requestOnce(fetchFn, endpoint, input) {
     throw new Error('Failed to connect to the analysis service.');
   }
 
-  if (!isJsonResponse(response)) {
-    const err = new Error(`Analysis service error (${response.status}).`);
+  const rawResponseText = await response.text();
+
+  if (!response.ok) {
+    console.error('Analysis service returned a non-OK response.', {
+      status: response.status,
+      rawResponseText,
+    });
+
+    const err = new Error('Analysis service error (' + response.status + ').');
     err.status = response.status;
+    err.rawResponseText = rawResponseText;
     throw err;
   }
 
-  const payload = await response.json();
-  return payload;
+  try {
+    return JSON.parse(rawResponseText);
+  } catch (parseError) {
+    console.error('Failed to parse analysis service JSON response.', {
+      status: response.status,
+      rawResponseText,
+      error: parseError,
+    });
+
+    const err = new Error('Analysis service returned invalid JSON.');
+    err.status = response.status;
+    err.rawResponseText = rawResponseText;
+    throw err;
+  }
 }
 
 export async function requestDashboardAnalysis(fetchFn, endpoint, input, fallbackEndpoint) {
