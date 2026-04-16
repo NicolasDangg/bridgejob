@@ -42,8 +42,8 @@ export default function Pricing() {
             {
               name: 'Enterprise',
               price: 'Contact',
-              description: 'For agencies and large teams.',
-              points: ['Team workspaces', 'Custom role templates', 'Match API access', 'Priority support'],
+              description: 'For agencies and HR teams.',
+              points: ['Team workspaces', 'Resume fitness checker (for HR)', 'Bulk analyze processes', 'Priority support'],
               cta: 'Contact Sales',
               featured: false,
               path: '/contact'
@@ -78,9 +78,8 @@ export default function Pricing() {
               <div className="p-6 bg-surface-off-white border-t border-border-subtle">
                 <Link
                   to={plan.path}
-                  className={`w-full h-10 flex items-center justify-center text-xs font-bold ${
-                    plan.featured ? 'enterprise-button' : 'enterprise-button-outline'
-                  } ${(plan as any).disabled ? 'opacity-50 cursor-default pointer-events-none' : ''}`}
+                  className={`w-full h-10 flex items-center justify-center text-xs font-bold ${plan.featured ? 'enterprise-button' : 'enterprise-button-outline'
+                    } ${(plan as any).disabled ? 'opacity-50 cursor-default pointer-events-none' : ''}`}
                 >
                   {plan.cta}
                 </Link>

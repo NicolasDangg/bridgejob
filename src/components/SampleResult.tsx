@@ -62,12 +62,16 @@ const mockAiResponse: FitResponse = {
   noise_skills: ['General team player', 'Familiarity with standard browser tools'],
   readiness_score: 58,
   bridge_steps: [
-    'Complete advanced SQL reporting modules on specialized platforms.',
-    'Execute a mock ATS reporting project using open-source hiring datasets.',
-    'Update professional portfolio to highlight cross-functional coordination results.'
+    'Complete "Advanced SQL for Operations" modules focusing on window functions and CTEs.',
+    'Enroll in "ATS Systems Mastery" (Workday/Greenhouse) focused on recruiting workflow automation.',
+    'Execute a mock data pipeline project using PostgreSQL and hiring API documentation.',
+    'Draft a stakeholder communication plan for a high-priority recruitment cycle.',
+    'Optimize professional portfolio to emphasize quantitative process improvements.',
+    'Participate in a 20-hour sandbox environment for cross-functional project management simulation.',
+    'Conduct a gap audit on local recruiting workflows against global enterprise standards.'
   ],
   analyst_note:
-    'Focus purely on the SQL and ATS gaps. The candidate\'s foundational process skills are sufficient for the role\'s basic operational needs.',
+    'Prioritize the SQL and ATS workflow gaps as these are non-negotiable hurdles for the screening stage. While the candidate\'s foundational process skills are excellent, the shift from internal coordination to external cross-functional stakeholder management requires a more robust "Product-Mindset" for operations. Closing the technical gaps first will unlock the credibility needed for the senior-level coordination responsibilities.',
 };
 
 export default function SampleResult() {
@@ -147,7 +151,7 @@ export default function SampleResult() {
                     disabled={isLoading}
                     className="w-full enterprise-button h-11 flex items-center justify-center gap-2"
                   >
-                    {isLoading ? 'Processing Intelligence...' : 'Run Analysis Simulation'}
+                    {isLoading ? 'Processing...' : 'Run Analysis'}
                     {!isLoading && <ArrowRight className="w-4 h-4" />}
                   </button>
                 </div>
@@ -177,9 +181,9 @@ export default function SampleResult() {
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Score</p>
                   </div>
 
-                  <div className="space-y-0.5 pt-1">
-                    <span className={`text-[11px] font-bold uppercase tracking-widest block ${response.readiness_score < 40 ? 'text-red-600' :
-                      response.readiness_score < 70 ? 'text-amber-600' : 'text-emerald-600'
+                  <div className="space-y-1.5 pt-1">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-widest inline-block ${response.readiness_score < 40 ? 'text-red-600 bg-red-50 border-red-100' :
+                      response.readiness_score < 70 ? 'text-amber-600 bg-amber-50 border-amber-100' : 'text-emerald-600 bg-emerald-50 border-emerald-100'
                       }`}>
                       {response.readiness_score < 40 ? 'Weak Fit' :
                         response.readiness_score < 70 ? 'Moderate Fit' : 'Strong Match'}
@@ -217,24 +221,32 @@ export default function SampleResult() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="border-b border-border-subtle">
+                          <tr className="border-b border-border-subtle bg-slate-50/50">
                             <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Capability</th>
-                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Priority</th>
+                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Priority</th>
                             <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gap Detail</th>
                           </tr>
                         </thead>
                         <tbody className="text-xs">
-                          {response.partial_matches.map((item, idx) => (
-                            <tr key={idx} className="border-b border-border-subtle last:border-0 hover:bg-slate-50 transition-colors">
-                              <td className="px-6 py-4 font-bold text-slate-900">{item.skill}</td>
-                              <td className="px-6 py-4">
-                                <span className="px-1.5 py-0.5 rounded-sm bg-slate-100 border border-slate-200 font-bold uppercase tracking-tighter text-[9px]">
-                                  {item.priority}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-slate-500 font-medium leading-relaxed max-w-xs">{item.gap_detail}</td>
-                            </tr>
-                          ))}
+                          {response.partial_matches.map((item, idx) => {
+                            const priorityStyles = {
+                              'CRITICAL': "bg-red-50 text-red-700 border-red-200",
+                              'IMPORTANT': "bg-amber-50 text-amber-700 border-amber-200",
+                              'NICE TO HAVE': "bg-blue-50 text-blue-700 border-blue-200",
+                            }[item.priority || 'NICE TO HAVE'] || "bg-slate-50 text-slate-600 border-slate-200";
+
+                            return (
+                              <tr key={idx} className="border-b border-border-subtle last:border-0 hover:bg-slate-50 transition-colors">
+                                <td className="px-6 py-4 font-bold text-slate-900">{item.skill}</td>
+                                <td className="px-6 py-4 text-center">
+                                  <span className={`px-2 py-0.5 rounded text-[9px] font-bold border uppercase tracking-tight ${priorityStyles}`}>
+                                    {item.priority}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-slate-500 font-medium leading-relaxed max-w-xs">{item.gap_detail}</td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -266,7 +278,7 @@ export default function SampleResult() {
                           <span className="shrink-0 w-6 h-6 rounded border border-white/20 flex items-center justify-center text-[10px] font-bold font-mono">
                             {idx + 1}
                           </span>
-                          <p className="text-xs font-medium text-slate-300 leading-relaxed uppercase tracking-tight">
+                          <p className="text-xs font-medium text-slate-300 leading-relaxed tracking-normal">
                             {step}
                           </p>
                         </div>

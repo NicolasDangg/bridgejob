@@ -59,7 +59,7 @@ function NavLink({ to, children, icon: Icon }: { to: string, children: ReactNode
 }
 
 function PageLayout({ children }: { children: ReactNode }) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, userPlan } = useAuth();
 
   return (
     <div className="min-h-screen bg-surface-off-white flex flex-col">
@@ -84,7 +84,7 @@ function PageLayout({ children }: { children: ReactNode }) {
               <div className="flex items-center gap-3 pl-4 border-l border-border-subtle">
                 <div className="flex flex-col items-end hidden sm:flex">
                   <span className="text-[11px] font-semibold text-slate-900">{user.email?.split('@')[0]}</span>
-                  <span className="text-[10px] text-slate-500">Free Plan</span>
+                  <span className="text-[10px] text-slate-500">{userPlan}</span>
                 </div>
                 <Link
                   to="/accounts"
@@ -148,7 +148,7 @@ function Hero() {
           Career Intelligence
         </div>
         <h1 className="text-5xl font-bold tracking-tight text-slate-900 sm:text-6xl">
-          Close the gap between you and the role.
+          Close the gap between you and your dream job.
         </h1>
         <p className="text-lg text-slate-600 leading-relaxed max-w-xl mx-auto">
           BridgeJob analyzes job descriptions against your experience to provide ranked readiness scores and actionable roadmaps. Trained by real-world data.
@@ -172,7 +172,7 @@ function Hero() {
 
         <div className="pt-16 grid grid-cols-3 gap-8 py-12 border-t border-border-subtle mt-16 max-w-lg mx-auto">
           <div className="text-center">
-            <div className="text-xl font-bold text-slate-900">10k+</div>
+            <div className="text-xl font-bold text-slate-900">10K+</div>
             <div className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mt-1">Users</div>
           </div>
           <div className="text-center">
@@ -180,7 +180,7 @@ function Hero() {
             <div className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mt-1">Accuracy</div>
           </div>
           <div className="text-center">
-            <div className="text-xl font-bold text-slate-900">24h</div>
+            <div className="text-xl font-bold text-slate-900">&lt;1 day</div>
             <div className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mt-1">Gap Closing</div>
           </div>
         </div>

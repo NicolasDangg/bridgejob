@@ -44,6 +44,19 @@ afterEach(() => {
 });
 
 describe('analyzeSkills', () => {
+  test('requests strict JSON output from model', async () => {
+    let capturedRequest;
+    const customFetch = async (_url, request) => {
+      capturedRequest = request;
+      return makeFetchResponse(JSON.stringify(validResult));
+    };
+
+    await analyzeSkills(jd, skills, customFetch);
+
+    const body = JSON.parse(capturedRequest.body);
+    assert.deepEqual(body.response_format, { type: 'json_object' });
+  });
+
   test('returns parsed JSON from AI response', async () => {
     const customFetch = async () => makeFetchResponse(JSON.stringify(validResult));
     const result = await analyzeSkills(jd, skills, customFetch);
@@ -69,6 +82,15 @@ describe('analyzeSkills', () => {
 
   test('throws ANALYZE_INVALID_RESPONSE on non-JSON content', async () => {
     const customFetch = async () => makeFetchResponse('plain text response');
+    await assert.rejects(
+      analyzeSkills(jd, skills, customFetch),
+      (err) => err?.code === 'ANALYZE_INVALID_RESPONSE',
+    );
+  });
+
+  test('throws ANALYZE_INVALID_RESPONSE when JSON shape is invalid', async () => {
+    const invalidShape = { readiness_score: 20 };
+    const customFetch = async () => makeFetchResponse(JSON.stringify(invalidShape));
     await assert.rejects(
       analyzeSkills(jd, skills, customFetch),
       (err) => err?.code === 'ANALYZE_INVALID_RESPONSE',

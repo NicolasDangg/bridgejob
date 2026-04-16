@@ -22,7 +22,7 @@ export default function Signup() {
       const mockUser = {
         id: `user-${Date.now()}`,
         email,
-        user_metadata: { full_name: fullName },
+        user_metadata: { full_name: fullName, plan: 'free' },
         aud: 'authenticated',
         role: 'authenticated',
         created_at: new Date().toISOString(),
@@ -44,7 +44,7 @@ export default function Signup() {
       email,
       options: {
         emailRedirectTo: redirectTo,
-        data: { full_name: fullName },
+        data: { full_name: fullName, plan: 'free' },
       },
     });
 

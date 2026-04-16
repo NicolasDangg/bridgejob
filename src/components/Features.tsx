@@ -61,7 +61,7 @@ export default function Features() {
             Join thousands of professionals using BridgeJob to navigate their career with data-driven precision.
           </p>
           <div className="pt-2">
-            <Link to={user ? "/dashboard" : "/signup"} className="enterprise-button h-11 px-8 text-sm">
+            <Link to={user ? "/dashboard" : "/signup"} className="enterprise-button h-11 px-8 text-sm border border-white/20">
               {user ? "Go to Dashboard" : "Start Free Analysis"}
             </Link>
           </div>

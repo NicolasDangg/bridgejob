@@ -24,7 +24,7 @@ export default function Login() {
           const mockUser = {
             id: 'test-user-id',
             email: testUser.email,
-            user_metadata: { full_name: testUser.fullName },
+            user_metadata: { full_name: testUser.fullName, plan: 'free' },
             aud: 'authenticated',
             role: 'authenticated',
             created_at: new Date().toISOString(),

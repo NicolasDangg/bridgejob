@@ -115,11 +115,12 @@ export const FeaturesShowcase = () => {
   return (
     <section className="bg-surface-white border-t border-border-subtle">
       <Marquee />
-      
+
       <div className="max-w-7xl mx-auto px-6 py-24">
         <div className="text-center space-y-4 mb-20">
           <h2 className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em]">Operational Capabilities</h2>
           <h3 className="text-4xl font-bold tracking-tight text-slate-900">Precision engineered for career intelligence.</h3>
+          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em] pt-2">Suitable for real-world companies today</h2>
         </div>
 
         <div className="flex items-stretch justify-center max-w-5xl mx-auto border border-border-subtle rounded-xl overflow-hidden shadow-sm bg-white">
@@ -129,14 +130,13 @@ export const FeaturesShowcase = () => {
               <button
                 key={feature.id}
                 onClick={() => setActiveTab(idx)}
-                className={`flex flex-col items-start p-6 py-8 text-left transition-all relative border-b border-border-subtle last:border-b-0 ${
-                  activeTab === idx 
-                    ? 'bg-white z-10' 
-                    : 'hover:bg-slate-100/50 opacity-60'
-                }`}
+                className={`flex flex-col items-start p-6 py-8 text-left transition-all relative border-b border-border-subtle last:border-b-0 ${activeTab === idx
+                  ? 'bg-white z-10'
+                  : 'hover:bg-slate-100/50 opacity-60'
+                  }`}
               >
                 {activeTab === idx && (
-                  <motion.div 
+                  <motion.div
                     layoutId="active-indicator"
                     className="absolute left-0 top-0 bottom-0 w-1 bg-slate-900"
                   />
@@ -171,9 +171,9 @@ export const FeaturesShowcase = () => {
                     return <Icon className="w-6 h-6 text-white" />;
                   })()}
                 </div>
-                
+
                 {FEATURES[activeTab].content}
-                
+
                 <div className="pt-8 border-t border-border-subtle">
                   <button className="flex items-center gap-2 text-[10px] font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-colors">
                     View technical documentation <ArrowRight className="w-3.5 h-3.5" />
