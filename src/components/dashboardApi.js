@@ -1,3 +1,8 @@
+function isJsonResponse(response) {
+  const contentType = response.headers?.get?.('content-type') ?? '';
+  return contentType.toLowerCase().includes('application/json');
+}
+
 function normalizeBaseUrl(baseUrl) {
   if (!baseUrl) return '';
 
@@ -34,34 +39,14 @@ async function requestOnce(fetchFn, endpoint, input) {
     throw new Error('Failed to connect to the analysis service.');
   }
 
-  const rawResponseText = await response.text();
-
-  if (!response.ok) {
-    console.error('Analysis service returned a non-OK response.', {
-      status: response.status,
-      rawResponseText,
-    });
-
+  if (!isJsonResponse(response)) {
     const err = new Error('Analysis service error (' + response.status + ').');
     err.status = response.status;
-    err.rawResponseText = rawResponseText;
     throw err;
   }
 
-  try {
-    return JSON.parse(rawResponseText);
-  } catch (parseError) {
-    console.error('Failed to parse analysis service JSON response.', {
-      status: response.status,
-      rawResponseText,
-      error: parseError,
-    });
-
-    const err = new Error('Analysis service returned invalid JSON.');
-    err.status = response.status;
-    err.rawResponseText = rawResponseText;
-    throw err;
-  }
+  const payload = await response.json();
+  return payload;
 }
 
 export async function requestDashboardAnalysis(fetchFn, endpoint, input, fallbackEndpoint) {
