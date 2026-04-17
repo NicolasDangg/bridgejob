@@ -47,7 +47,7 @@ const mockAiResponse: FitResponse = {
       gap_detail: 'Limited experience with SQL queries and no mention of more complex queries.',
       priority: 'IMPORTANT',
       learnability: 'FAST',
-      action: 'Complete a course on SQL fundamentals, such as DataCamp's "Intro to SQL".',
+      action: "Complete a course on SQL fundamentals, such as DataCamp's \"Intro to SQL\".",
     },
     {
       skill: 'Spreadsheets (data tracking and visualization)',
