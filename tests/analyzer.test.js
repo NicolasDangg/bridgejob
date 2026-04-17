@@ -44,23 +44,43 @@ afterEach(() => {
 });
 
 describe('analyzeSkills', () => {
-  test('requests strict JSON output from model', async () => {
-    let capturedRequest;
-    const customFetch = async (_url, request) => {
-      capturedRequest = request;
-      return makeFetchResponse(JSON.stringify(validResult));
-    };
+  test('returns parsed JSON from AI response and coerces readiness_score strings', async () => {
+    const customFetch = async () =>
+      makeFetchResponse(
+        'Here is the analysis:\n```json\n' +
+          JSON.stringify({ ...validResult, readiness_score: '20' }) +
+          '\n```',
+      );
 
-    await analyzeSkills(jd, skills, customFetch);
-
-    const body = JSON.parse(capturedRequest.body);
-    assert.deepEqual(body.response_format, { type: 'json_object' });
+    const result = await analyzeSkills(jd, skills, customFetch);
+    assert.deepEqual(result.readiness_score, 20);
+    assert.deepEqual(result, validResult);
   });
 
-  test('returns parsed JSON from AI response', async () => {
-    const customFetch = async () => makeFetchResponse(JSON.stringify(validResult));
+  test('recovers JSON from wrapped text and normalizes minor field variations', async () => {
+    const customFetch = async () =>
+      makeFetchResponse(
+        'Analysis output follows:\n' +
+          JSON.stringify({
+            job_title: 'Backend Engineer',
+            overall_fit: 'MODERATE',
+            overall_summary: 'Okay fit',
+            strong_matches: [{ skill: 'SQL', evidence: 'Used spreadsheets' }],
+            partial_matches: [],
+            gaps: [],
+            noise_skills: 'communication',
+            bridge_steps: 'Build a small project',
+            analyst_note: 'Fine',
+          }) +
+          '\nThanks.',
+      );
+
     const result = await analyzeSkills(jd, skills, customFetch);
-    assert.deepEqual(result, validResult);
+    assert.equal(result.readiness_score, 65);
+    assert.deepEqual(result.strong_matches, [{ skill: 'SQL', note: 'Used spreadsheets' }]);
+    assert.deepEqual(result.noise_skills, ['communication']);
+    assert.deepEqual(result.bridge_steps, ['Build a small project']);
+    assert.equal(result.overall_fit, 'MODERATE');
   });
 
   test('throws ANALYZE_TIMEOUT when request exceeds timeout', async () => {
@@ -82,15 +102,6 @@ describe('analyzeSkills', () => {
 
   test('throws ANALYZE_INVALID_RESPONSE on non-JSON content', async () => {
     const customFetch = async () => makeFetchResponse('plain text response');
-    await assert.rejects(
-      analyzeSkills(jd, skills, customFetch),
-      (err) => err?.code === 'ANALYZE_INVALID_RESPONSE',
-    );
-  });
-
-  test('throws ANALYZE_INVALID_RESPONSE when JSON shape is invalid', async () => {
-    const invalidShape = { readiness_score: 20 };
-    const customFetch = async () => makeFetchResponse(JSON.stringify(invalidShape));
     await assert.rejects(
       analyzeSkills(jd, skills, customFetch),
       (err) => err?.code === 'ANALYZE_INVALID_RESPONSE',
