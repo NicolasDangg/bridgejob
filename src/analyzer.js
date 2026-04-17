@@ -23,202 +23,6 @@ function withTimeout(promise, timeoutMs) {
   });
 }
 
-function stripMarkdownCodeFences(text) {
-  return text
-    .trim()
-    .replace(/^```[^\n]*\n?/i, '')
-    .replace(/\n?```\s*$/i, '')
-    .trim();
-}
-
-function extractJsonCandidate(text) {
-  const cleaned = stripMarkdownCodeFences(text);
-
-  try {
-    JSON.parse(cleaned);
-    return cleaned;
-  } catch {
-    const objectMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (objectMatch) {
-      return objectMatch[0].trim();
-    }
-
-    const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
-    if (arrayMatch) {
-      return arrayMatch[0].trim();
-    }
-
-    return cleaned;
-  }
-}
-
-function coerceNumber(value) {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-
-  if (typeof value === 'string') {
-    const parsed = Number(value.trim());
-    if (Number.isFinite(parsed)) {
-      return parsed;
-    }
-  }
-
-  return undefined;
-}
-
-function normalizeString(value) {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-function normalizeEnum(value, allowed) {
-  const candidate = normalizeString(value).toUpperCase();
-  return allowed.includes(candidate) ? candidate : '';
-}
-
-function normalizeStringArray(value) {
-  if (Array.isArray(value)) {
-    return value.map((item) => normalizeString(item)).filter(Boolean);
-  }
-
-  const normalized = normalizeString(value);
-  return normalized ? [normalized] : [];
-}
-
-function pickFirstDefined(...values) {
-  for (const value of values) {
-    if (value !== undefined && value !== null && value !== '') {
-      return value;
-    }
-  }
-
-  return undefined;
-}
-
-function normalizeMatchItem(item, kind) {
-  if (!item || typeof item !== 'object' || Array.isArray(item)) {
-    return null;
-  }
-
-  const skill = normalizeString(item.skill ?? item.name ?? item.title);
-  if (!skill) {
-    return null;
-  }
-
-  if (kind === 'strong') {
-    const note = normalizeString(item.note ?? item.evidence ?? item.description ?? item.details);
-    return {
-      skill,
-      note,
-    };
-  }
-
-  const gapDetail = normalizeString(
-    item.gap_detail ?? item.gapDetail ?? item.detail ?? item.note ?? item.evidence ?? item.description,
-  );
-  const priority = normalizeEnum(item.priority, ['CRITICAL', 'IMPORTANT', 'NICE TO HAVE']);
-  const learnability = normalizeEnum(item.learnability, ['FAST', 'MEDIUM', 'SLOW']);
-  const action = normalizeString(item.action ?? item.suggestion ?? item.recommendation ?? item.next_step);
-
-  const normalized = { skill };
-
-  if (gapDetail) {
-    normalized.gap_detail = gapDetail;
-  }
-  if (priority) {
-    normalized.priority = priority;
-  }
-  if (learnability) {
-    normalized.learnability = learnability;
-  }
-  if (action) {
-    normalized.action = action;
-  }
-
-  return normalized;
-}
-
-function normalizeMatchArray(value, kind) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.map((item) => normalizeMatchItem(item, kind)).filter(Boolean);
-}
-
-function fallbackReadinessScore(result) {
-  const fit = normalizeEnum(result?.overall_fit ?? result?.overallFit ?? result?.fit, [
-    'STRONG',
-    'MODERATE',
-    'WEAK',
-    'SEVERELY UNDERQUALIFIED',
-  ]);
-
-  switch (fit) {
-    case 'STRONG':
-      return 90;
-    case 'MODERATE':
-      return 65;
-    case 'WEAK':
-      return 35;
-    case 'SEVERELY UNDERQUALIFIED':
-      return 10;
-    default:
-      return 50;
-  }
-}
-
-function normalizeAnalysisResult(result) {
-  const readinessScoreCandidate = coerceNumber(
-    pickFirstDefined(
-      result?.readiness_score,
-      result?.readinessScore,
-      result?.score,
-      result?.readiness,
-      result?.match_score,
-    ),
-  );
-
-  const readinessScore = Number.isFinite(readinessScoreCandidate)
-    ? Math.max(0, Math.min(100, Math.round(readinessScoreCandidate)))
-    : fallbackReadinessScore(result);
-
-  return {
-    job_title: normalizeString(
-      pickFirstDefined(result?.job_title, result?.jobTitle, result?.title, result?.role, result?.position),
-    ),
-    overall_fit: normalizeEnum(
-      pickFirstDefined(result?.overall_fit, result?.overallFit, result?.fit, result?.rating),
-      ['STRONG', 'MODERATE', 'WEAK', 'SEVERELY UNDERQUALIFIED'],
-    ),
-    overall_summary: normalizeString(
-      pickFirstDefined(result?.overall_summary, result?.overallSummary, result?.summary, result?.analysis_summary),
-    ),
-    strong_matches: normalizeMatchArray(
-      pickFirstDefined(result?.strong_matches, result?.strongMatches, result?.strengths, result?.matches),
-      'strong',
-    ),
-    partial_matches: normalizeMatchArray(
-      pickFirstDefined(result?.partial_matches, result?.partialMatches, result?.partial_match, result?.partial),
-      'partial',
-    ),
-    gaps: normalizeMatchArray(
-      pickFirstDefined(result?.gaps, result?.missing_skills, result?.missingSkills, result?.weaknesses),
-      'gap',
-    ),
-    noise_skills: normalizeStringArray(
-      pickFirstDefined(result?.noise_skills, result?.noiseSkills, result?.noise, result?.irrelevant_skills),
-    ),
-    readiness_score: readinessScore,
-    bridge_steps: normalizeStringArray(
-      pickFirstDefined(result?.bridge_steps, result?.bridgeSteps, result?.next_steps, result?.nextSteps, result?.action_steps),
-    ),
-    analyst_note: normalizeString(
-      pickFirstDefined(result?.analyst_note, result?.analystNote, result?.note, result?.notes),
-    ),
-  };
-}
-
 export async function analyzeSkills(jd, skills, fetchImpl, options = {}) {
   const fetchFn = fetchImpl || globalThis.fetch;
   const timeoutMs = options.timeoutMs ?? 20000;
@@ -238,6 +42,7 @@ export async function analyzeSkills(jd, skills, fetchImpl, options = {}) {
         },
         body: JSON.stringify({
           model: 'llama-3.1-8b-instant',
+          temperature: 0,
           messages: [
             { role: 'system', content: buildSystemPrompt() },
             { role: 'user', content: buildUserPrompt(jd, skills) },
@@ -278,20 +83,19 @@ export async function analyzeSkills(jd, skills, fetchImpl, options = {}) {
     throw createDomainError('ANALYZE_INVALID_RESPONSE', 'Groq returned an unexpected response format.');
   }
 
-  const candidate = extractJsonCandidate(raw);
+  const normalized = raw
+    .replace(/^```(json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
 
-  let parsed;
+  let result;
   try {
-    parsed = JSON.parse(candidate);
+    result = JSON.parse(normalized);
   } catch {
     throw createDomainError('ANALYZE_INVALID_RESPONSE', 'AI returned non-JSON response.');
   }
 
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw createDomainError('ANALYZE_INVALID_RESPONSE', 'AI returned non-object JSON response.');
-  }
-
-  return normalizeAnalysisResult(parsed);
+  return result;
 }
 
 export { createDomainError };
