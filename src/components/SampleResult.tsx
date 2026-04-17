@@ -2,19 +2,15 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../lib/AuthContext';
+import { Search, ArrowRight, Zap, Target, ShieldCheck, Info, Lock } from 'lucide-react';
 
 type MatchItem = {
   skill: string;
   note?: string;
   gap_detail?: string;
-  gap?: string;
   priority?: 'CRITICAL' | 'IMPORTANT' | 'NICE TO HAVE';
-  priority_level?: 'CRITICAL' | 'IMPORTANT' | 'NICE TO HAVE';
-  priorityLevel?: 'CRITICAL' | 'IMPORTANT' | 'NICE TO HAVE';
   learnability?: 'FAST' | 'MEDIUM' | 'SLOW';
   action?: string;
-  actionable_steps?: string;
-  actionableStep?: string;
 };
 
 type FitResponse = {
@@ -23,7 +19,6 @@ type FitResponse = {
   overall_summary: string;
   strong_matches: MatchItem[];
   partial_matches: MatchItem[];
-  gaps?: MatchItem[];
   noise_skills: string[];
   readiness_score: number;
   bridge_steps: string[];
@@ -31,106 +26,53 @@ type FitResponse = {
 };
 
 const mockAiResponse: FitResponse = {
-  job_title: 'Senior operations associate for a fast-growing hiring platform',
+  job_title: 'Senior Operations Associate',
   overall_fit: 'MODERATE',
   overall_summary:
-    'Candidate has relevant experience with student projects and basic skills in Excel and SQL, but lacks experience with ATS tools and deeper SQL skills.',
+    'The candidate demonstrates competency in administrative execution and basic data management. However, there is a distinct gap in enterprise-level SQL complexity and ATS reporting workflows required for this specific role.',
   strong_matches: [
     {
-      skill: 'Structured workflows, checklists, and repetitive admin tasks',
-      note: 'Candidate has relevant experience with student projects.',
+      skill: 'Process Optimization',
+      note: 'Proven track record of managing repeatable workflows in project environments.',
     },
   ],
   partial_matches: [
     {
-      skill: 'Basic SQL queries',
-      gap_detail: 'Limited experience with SQL queries and no mention of more complex queries.',
-      priority: 'IMPORTANT',
-      learnability: 'FAST',
-      action: "Complete a course on SQL fundamentals, such as DataCamp's \"Intro to SQL\".",
-    },
-    {
-      skill: 'Spreadsheets (data tracking and visualization)',
-      gap_detail: 'Limited experience with dashboard building and no mention of data visualization tools.',
-      priority: 'IMPORTANT',
-      learnability: 'FAST',
-      action:
-        'Practice building more complex dashboards in Google Sheets or Excel using templates from platforms like Tableau or Power BI.',
-    },
-    {
-      skill: 'Communication and coordination',
-      gap_detail: 'Mentions of communication with teachers and classmates are limited to academic setting.',
+      skill: 'SQL Systems Reporting',
+      gap_detail: 'Candidate uses basic queries; role requires complex joins and automated data pipelines.',
       priority: 'CRITICAL',
       learnability: 'MEDIUM',
-      action:
-        'Practice coordinating with multiple stakeholders and taking on customer-facing roles, such as in online communities or freelance writing.',
+      action: 'Targeted advanced SQL certification or 20+ hours of sandbox practice with multi-table joins.',
     },
     {
-      skill: 'Familiarity with ATS tools and reporting',
-      gap_detail: 'No experience with ATS tools and only mentions basic SQL.',
-      priority: 'CRITICAL',
+      skill: 'ATS Workflow Management',
+      gap_detail: 'No direct experience with Workday or Greenhouse environments.',
+      priority: 'IMPORTANT',
+      learnability: 'FAST',
+      action: 'Review ATS API documentation and reporting structures for top-tier hiring platforms.',
+    },
+    {
+      skill: 'Stakeholder Coordination',
+      gap_detail: 'Experience is primarily internal; role requires cross-functional external management.',
+      priority: 'IMPORTANT',
       learnability: 'MEDIUM',
-      action:
-        'Familiarize yourself with popular ATS tools like Workday or BambooHR by watching tutorials or attending webinars, and practice generating reports using basic SQL queries.',
+      action: 'Engagement in stakeholder management seminars or customer-facing project assignments.',
     },
   ],
-  gaps: [
-    {
-      skill: 'ATS ownership',
-      gap_detail: 'No direct ownership of applicant tracking systems or hiring workflows.',
-      priority: 'CRITICAL',
-      learnability: 'MEDIUM',
-      action: 'Practice with a Workday or BambooHR demo environment and document a sample candidate workflow from intake to offer.',
-    },
-    {
-      skill: 'Recurring reporting',
-      gap_detail: 'Reporting experience is basic and not clearly tied to regular operations.',
-      priority: 'IMPORTANT',
-      learnability: 'FAST',
-      action: 'Build a weekly recruiting dashboard in Google Sheets or Excel using a sample dataset and refresh it on a schedule.',
-    },
-  ],
-  noise_skills: ['Strong communication, attention to detail, and comfort with spreadsheets'],
-  readiness_score: 50,
+  noise_skills: ['General team player', 'Familiarity with standard browser tools'],
+  readiness_score: 58,
   bridge_steps: [
-    'Take online courses to further develop SQL skills and practice with real-world data.',
-    'Build experience working with ATS tools and reporting through internships, freelance work, or volunteering.',
+    'Complete "Advanced SQL for Operations" modules focusing on window functions and CTEs.',
+    'Enroll in "ATS Systems Mastery" (Workday/Greenhouse) focused on recruiting workflow automation.',
+    'Execute a mock data pipeline project using PostgreSQL and hiring API documentation.',
+    'Draft a stakeholder communication plan for a high-priority recruitment cycle.',
+    'Optimize professional portfolio to emphasize quantitative process improvements.',
+    'Participate in a 20-hour sandbox environment for cross-functional project management simulation.',
+    'Conduct a gap audit on local recruiting workflows against global enterprise standards.'
   ],
   analyst_note:
-    'Candidate has a good foundation in basic skills like SQL and spreadsheets, but lacks experience in critical areas like ATS tools and reporting, and more complex SQL queries.',
+    'Prioritize the SQL and ATS workflow gaps as these are non-negotiable hurdles for the screening stage. While the candidate\'s foundational process skills are excellent, the shift from internal coordination to external cross-functional stakeholder management requires a more robust "Product-Mindset" for operations. Closing the technical gaps first will unlock the credibility needed for the senior-level coordination responsibilities.',
 };
-
-
-type AnalyzeApiResponse =
-  | { success: true; data: FitResponse; error: null }
-  | { success: false; data: null; error: { code: string; message: string; details?: unknown } };
-
-const priorityToneMap: Record<NonNullable<MatchItem['priority']>, string> = {
-  CRITICAL: 'bg-red-100 text-zinc-900 border-red-300',
-  IMPORTANT: 'bg-amber-100 text-zinc-900 border-amber-300',
-  'NICE TO HAVE': 'bg-blue-100 text-zinc-900 border-blue-300',
-};
-
-function getMatchPriority(match: MatchItem) {
-  return match.priority ?? match.priority_level ?? match.priorityLevel;
-}
-
-function getMatchAction(match: MatchItem) {
-  return match.action ?? match.actionable_steps ?? match.actionableStep ?? '';
-}
-
-function getMatchGapDetail(match: MatchItem) {
-  return match.gap_detail ?? match.gap ?? '';
-}
-
-function getReadinessVisual(score: number) {
-  if (score <= 20) return { tone: 'bg-red-500/80', label: 'Poor' };
-  if (score <= 40) return { tone: 'bg-orange-500/80', label: 'Fair' };
-  if (score <= 60) return { tone: 'bg-amber-500/80', label: 'Moderate' };
-  if (score <= 80) return { tone: 'bg-lime-500/80', label: 'Strong' };
-  return { tone: 'bg-emerald-500/85', label: 'Excellent' };
-}
-
 
 export default function SampleResult() {
   const { user } = useAuth();
@@ -141,22 +83,10 @@ export default function SampleResult() {
     'Student project coordinator with Excel and basic SQL familiarity, strong attention to detail, and experience running repeatable processes.',
   );
   const [response, setResponse] = useState<FitResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  const readinessVisual = useMemo(() => {
-    const score = response?.readiness_score ?? 0;
-    if (score <= 20) return { tone: 'bg-red-500/80', label: 'LOW FIT' };
-    if (score <= 40) return { tone: 'bg-orange-500/80', label: 'BUILDING FIT' };
-    if (score <= 60) return { tone: 'bg-amber-500/80', label: 'MODERATE FIT' };
-    if (score <= 80) return { tone: 'bg-lime-500/80', label: 'GOOD FIT' };
-    return { tone: 'bg-emerald-500/85', label: 'STRONG FIT' };
-  }, [response]);
 
   const runSampleAnalysis = async () => {
     setIsLoading(true);
-    setError(null);
-    // Simulated delay for demo purposes
     setTimeout(() => {
       setResponse(mockAiResponse);
       setIsLoading(false);
@@ -164,229 +94,221 @@ export default function SampleResult() {
   };
 
   return (
-    <div className="relative overflow-hidden px-1 sm:px-2 lg:px-2 py-[22px]">
-      <div className="relative z-10 max-w-[1380px] mx-auto px-0.5 sm:px-1 lg:px-2">
+    <section id="sample-result" className="bg-surface-white py-24 px-6 border-t border-border-subtle">
+      <div className="max-w-5xl mx-auto space-y-12">
+        <div className="text-center space-y-4 max-w-2xl mx-auto">
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900 italic">Try the analysis engine.</h2>
+          <p className="text-sm text-slate-600 leading-relaxed font-medium">
+            Simulate a high-density intelligence report. Compare a complex job description against baseline candidate data to see how BridgeJob identifies gaps and generates roadmaps.
+          </p>
+        </div>
+
         <AnimatePresence mode="wait">
           {!response ? (
             <motion.div
               key="analyzer"
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.28, ease: 'easeOut' }}
-              className="w-full min-h-[calc(100vh-220px)] flex items-center justify-center"
+              exit={{ opacity: 0 }}
+              className="flex items-center justify-center"
             >
-              <div className="w-full max-w-[470px] min-h-[462px] p-6 bg-white/78 border border-black/12 rounded-md shadow-[0_14px_38px_rgba(0,0,0,0.14)]">
-                <h2 className="text-2xl font-sans font-extrabold text-zinc-900 mb-2">Try The Fit Analyzer</h2>
-                <p className="text-zinc-700 text-sm mb-4">
-                  A sample job description and candidate experience to run an instant fit check.
-                </p>
-                <div className="h-[calc(100%-5.25rem)] flex flex-col">
-                  <div className="space-y-3">
-                  <label className="block">
-                    <span className="block text-xs uppercase tracking-[0.2em] font-semibold text-zinc-700 mb-2">Job Description</span>
+              <div className="enterprise-card w-full max-w-lg overflow-hidden">
+                <div className="px-6 py-4 bg-surface-off-white border-b border-border-subtle flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">Intelligence Demo</span>
+                  <div className="flex gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-900" />
+                  </div>
+                </div>
+                <div className="p-8 space-y-6">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Target Role Context</label>
+                      <Lock className="w-3 h-3 text-slate-300" />
+                    </div>
                     <textarea
                       value={jdText}
-                      onChange={(event) => setJdText(event.target.value)}
-                      className="w-full h-[95px] rounded-sm border border-black/16 bg-white/92 text-zinc-900 placeholder:text-zinc-500 p-3 text-sm leading-relaxed resize-none focus:outline-none focus:ring-1 focus:ring-black/20"
-                      placeholder="Paste the JD here"
+                      readOnly
+                      className="enterprise-input h-24 resize-none leading-relaxed bg-slate-50/50 cursor-not-allowed"
+                      placeholder="Target Job Description..."
                     />
-                  </label>
-
-                  <label className="block">
-                    <span className="block text-xs uppercase tracking-[0.2em] font-semibold text-zinc-700 mb-2">Candidate Experience</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Candidate Capabilities</label>
+                      <Lock className="w-3 h-3 text-slate-300" />
+                    </div>
                     <textarea
                       value={candidateText}
-                      onChange={(event) => setCandidateText(event.target.value)}
-                      className="w-full h-[95px] rounded-sm border border-black/16 bg-white/92 text-zinc-900 placeholder:text-zinc-500 p-3 text-sm leading-relaxed resize-none focus:outline-none focus:ring-1 focus:ring-black/20"
-                      placeholder="Paste resume or experience summary"
+                      readOnly
+                      className="enterprise-input h-24 resize-none leading-relaxed bg-slate-50/50 cursor-not-allowed"
+                      placeholder="Candidate Resume/Profile..."
                     />
-                  </label>
                   </div>
-
-                  <div className="pt-4 mt-auto flex justify-center">
-                    <button
-                      type="button"
-                      onClick={runSampleAnalysis}
-                      disabled={isLoading}
-                      className="w-full sm:w-[220px] px-6 py-3 bg-white text-zinc-900 border border-black/12 rounded-sm font-semibold hover:bg-zinc-100 transition-colors"
-                    >
-                      {isLoading ? 'Analyzing...' : 'Run Analysis'}
-                    </button>
-                  </div>
-                  {error ? <p className="pt-3 text-xs text-red-700">{error}</p> : null}
+                  <button
+                    onClick={runSampleAnalysis}
+                    disabled={isLoading}
+                    className="w-full enterprise-button h-11 flex items-center justify-center gap-2"
+                  >
+                    {isLoading ? 'Processing...' : 'Run Analysis'}
+                    {!isLoading && <ArrowRight className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
             </motion.div>
           ) : (
             <motion.div
-              key="summary"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-              className="w-full min-h-[calc(100vh-220px)]"
+              key="result"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-8 pb-12"
             >
-              <div className="w-full space-y-3 lg:space-y-4">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-700 font-semibold">Fit Summary</p>
-                  <h3 className="text-3xl lg:text-4xl font-sans font-extrabold text-zinc-900 mt-1 leading-tight tracking-tight">{response.job_title}</h3>
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-border-subtle">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none italic">Analysis Output</p>
+                  <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+                    {response.job_title}
+                  </h1>
                 </div>
-                <div className="w-full lg:max-w-[420px]">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-zinc-800 font-semibold mb-2">
-                    {readinessVisual.label}
-                  </p>
-                  <div className="relative h-8 rounded-sm border border-black/20 overflow-hidden bg-white/92">
-                    <div className="absolute inset-0 grid grid-cols-5">
-                      <div className="bg-red-200/70" />
-                      <div className="bg-orange-200/70" />
-                      <div className="bg-amber-200/80" />
-                      <div className="bg-lime-200/70" />
-                      <div className="bg-emerald-200/70" />
-                    </div>
-                    <div
-                      className={`absolute left-0 top-0 h-full ${readinessVisual.tone}`}
-                      style={{ width: `${response.readiness_score}%` }}
-                    />
-                    <div
-                      className="absolute top-1/2 -translate-y-1/2 text-[11px] font-bold text-zinc-900 bg-white/95 border border-black/20 px-2 py-[1px] rounded-sm"
-                      style={{ left: `clamp(8px, calc(${response.readiness_score}% - 22px), calc(100% - 52px))` }}
-                    >
+                <div className="flex flex-col w-48 mr-[65px] space-y-0">
+                  <div className="flex items-baseline gap-1 leading-none">
+                    <span className={`text-3xl font-bold tracking-tighter leading-none ${response.readiness_score < 40 ? 'text-red-600' :
+                      response.readiness_score < 70 ? 'text-amber-600' : 'text-emerald-600'
+                      }`}>
                       {response.readiness_score}%
+                    </span>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Score</p>
+                  </div>
+
+                  <div className="space-y-1.5 pt-1">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-widest inline-block ${response.readiness_score < 40 ? 'text-red-600 bg-red-50 border-red-100' :
+                      response.readiness_score < 70 ? 'text-amber-600 bg-amber-50 border-amber-100' : 'text-emerald-600 bg-emerald-50 border-emerald-100'
+                      }`}>
+                      {response.readiness_score < 40 ? 'Weak Fit' :
+                        response.readiness_score < 70 ? 'Moderate Fit' : 'Strong Match'}
+                    </span>
+
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden border border-border-subtle">
+                      <div
+                        className={`h-full transition-all duration-1000 ease-out ${response.readiness_score < 40 ? 'bg-red-600' :
+                          response.readiness_score < 70 ? 'bg-amber-600' : 'bg-emerald-600'
+                          }`}
+                        style={{ width: `${response.readiness_score}%` }}
+                      />
                     </div>
-                    <div className="absolute inset-0 border-l border-r border-black/15 [background:linear-gradient(to_right,transparent_calc(20%-0.5px),rgba(0,0,0,0.2)_calc(20%-0.5px),rgba(0,0,0,0.2)_calc(20%+0.5px),transparent_calc(20%+0.5px),transparent_calc(40%-0.5px),rgba(0,0,0,0.2)_calc(40%-0.5px),rgba(0,0,0,0.2)_calc(40%+0.5px),transparent_calc(40%+0.5px),transparent_calc(60%-0.5px),rgba(0,0,0,0.2)_calc(60%-0.5px),rgba(0,0,0,0.2)_calc(60%+0.5px),transparent_calc(60%+0.5px),transparent_calc(80%-0.5px),rgba(0,0,0,0.2)_calc(80%-0.5px),rgba(0,0,0,0.2)_calc(80%+0.5px),transparent_calc(80%+0.5px))]" />
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-md bg-white/78 border border-black/12 p-4 shadow-[0_12px_28px_rgba(0,0,0,0.12)]">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.15em] text-zinc-700 font-semibold mb-1">Overall Summary</p>
-                    <p className="text-zinc-800 text-sm leading-relaxed">{response.overall_summary}</p>
-                  </div>
-                  {!user && (
-                    <div className="flex items-center gap-2 pt-1">
-                      <span className="text-xs text-zinc-700">Save this result? </span>
-                      <Link to="/login" className="px-3 py-1.5 rounded-sm text-[11px] font-semibold text-zinc-900 border border-black/20 hover:bg-black/5 transition-colors">
-                        Log in
-                      </Link>
-                      <Link to="/signup" className="px-3 py-1.5 rounded-sm text-[11px] font-semibold bg-white text-zinc-900 border border-black/12 hover:bg-zinc-100 transition-all shadow-sm">
-                        Create an account
-                      </Link>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="enterprise-card bg-white p-6 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-slate-400" />
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Executive Summary</span>
                     </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-md bg-white/75 border border-black/12 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.1)]">
-                <p className="text-xs uppercase tracking-[0.15em] text-zinc-700 font-semibold mb-1">Strong Match</p>
-                {response.strong_matches.map((match, index) => (
-                  <div key={index} className="text-sm text-zinc-800">
-                    <p className="font-semibold text-zinc-900">{match.skill}</p>
-                    {match.note ? <p className="text-zinc-700 mt-1">{match.note}</p> : null}
+                    <p className="text-sm font-medium text-slate-700 leading-relaxed italic">
+                      "{response.overall_summary}"
+                    </p>
                   </div>
-                ))}
-              </div>
 
-                <div className="space-y-8">
-                  {response.partial_matches.length > 0 && (
-                    <div className="space-y-4">
-                      <div className="flex flex-wrap items-end justify-between gap-3">
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600 font-bold">Partial Matches</p>
-                          <p className="text-sm text-zinc-700">Relevant experience that still needs a closing step.</p>
-                        </div>
-                        <span className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 font-semibold">{response.partial_matches.length} items</span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {response.partial_matches.map((match, index) => {
-                          const priority = getMatchPriority(match);
-                          const gapDetail = getMatchGapDetail(match);
-                          const action = getMatchAction(match);
+                  <div className="enterprise-card overflow-hidden">
+                    <div className="px-5 py-3 bg-surface-off-white border-b border-border-subtle flex items-center gap-2">
+                      <Target className="w-4 h-4 text-slate-400" />
+                      <span className="text-[11px] font-bold text-slate-700 uppercase tracking-widest">Skill Mapping & Gaps</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-border-subtle bg-slate-50/50">
+                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Capability</th>
+                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Priority</th>
+                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gap Detail</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-xs">
+                          {response.partial_matches.map((item, idx) => {
+                            const priorityStyles = {
+                              'CRITICAL': "bg-red-50 text-red-700 border-red-200",
+                              'IMPORTANT': "bg-amber-50 text-amber-700 border-amber-200",
+                              'NICE TO HAVE': "bg-blue-50 text-blue-700 border-blue-200",
+                            }[item.priority || 'NICE TO HAVE'] || "bg-slate-50 text-slate-600 border-slate-200";
 
-                          return (
-                            <div key={`partial-${index}-${match.skill}`} className="rounded-2xl border border-black/5 bg-white/60 p-6 flex flex-col space-y-4">
-                              <div className="space-y-2">
-                                <h4 className="font-bold text-zinc-900 text-sm leading-tight">{match.skill}</h4>
-                                {priority && (
-                                  <span className={`inline-block text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${priorityToneMap[priority]}`}>
-                                    {priority}
+                            return (
+                              <tr key={idx} className="border-b border-border-subtle last:border-0 hover:bg-slate-50 transition-colors">
+                                <td className="px-6 py-4 font-bold text-slate-900">{item.skill}</td>
+                                <td className="px-6 py-4 text-center">
+                                  <span className={`px-2 py-0.5 rounded text-[9px] font-bold border uppercase tracking-tight ${priorityStyles}`}>
+                                    {item.priority}
                                   </span>
-                                )}
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[9px] uppercase tracking-[0.1em] text-zinc-600 font-bold">Gap</p>
-                                <p className="text-zinc-800 text-[13px] leading-relaxed">{gapDetail || 'No gap detail provided.'}</p>
-                              </div>
-                              <div className="space-y-1 mt-auto pt-2 border-t border-black/5">
-                                <p className="text-[9px] uppercase tracking-[0.1em] text-zinc-600 font-bold">Actionable step</p>
-                                <p className="text-zinc-900 text-[13px] leading-relaxed font-medium">{action || 'No action step provided.'}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                                </td>
+                                <td className="px-6 py-4 text-slate-500 font-medium leading-relaxed max-w-xs">{item.gap_detail}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
-                  )}
+                  </div>
 
-                  {(response.gaps?.length ?? 0) > 0 && (
-                    <div className="space-y-4 rounded-2xl border border-rose-100 bg-rose-50/40 p-6">
-                      <div className="flex flex-wrap items-end justify-between gap-3">
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-rose-700 font-bold">Gaps</p>
-                          <p className="text-sm text-rose-800/80">Missing requirements with a direct plan to close them.</p>
-                        </div>
-                        <span className="text-[10px] uppercase tracking-[0.18em] text-rose-700/70 font-semibold">{response.gaps?.length ?? 0} items</span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {(response.gaps ?? []).map((match, index) => {
-                          const priority = getMatchPriority(match);
-                          const gapDetail = getMatchGapDetail(match);
-                          const action = getMatchAction(match);
-
-                          return (
-                            <div key={`gap-${index}-${match.skill}`} className="rounded-2xl border border-rose-100 bg-white/80 p-6 flex flex-col space-y-4">
-                              <div className="space-y-2">
-                                <h4 className="font-bold text-zinc-900 text-sm leading-tight">{match.skill}</h4>
-                                {priority && (
-                                  <span className={`inline-block text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${priorityToneMap[priority]}`}>
-                                    {priority}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="space-y-1">
-                                <p className="text-[9px] uppercase tracking-[0.1em] text-zinc-600 font-bold">Gap</p>
-                                <p className="text-zinc-800 text-[13px] leading-relaxed">{gapDetail || 'No gap detail provided.'}</p>
-                              </div>
-                              <div className="space-y-1 mt-auto pt-2 border-t border-black/5">
-                                <p className="text-[9px] uppercase tracking-[0.1em] text-zinc-600 font-bold">Actionable step</p>
-                                <p className="text-zinc-900 text-[13px] leading-relaxed font-medium">{action || 'No action step provided.'}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                  <div className="enterprise-card p-5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Info className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Analyst Note</span>
                     </div>
-                  )}
+                    <p className="text-xs text-slate-600 font-medium leading-relaxed italic">
+                      "{response.analyst_note}"
+                    </p>
+                  </div>
                 </div>
 
-              <div className="rounded-md bg-white/80 border border-black/12 p-4 shadow-[0_14px_34px_rgba(0,0,0,0.12)]">
-                <p className="text-xs uppercase tracking-[0.15em] text-zinc-800 font-semibold mb-2">Bridge Steps</p>
-                <ul className="space-y-2 text-sm text-zinc-800">
-                  {response.bridge_steps.map((step, index) => (
-                    <li key={index} className="leading-relaxed bg-white border border-black/10 rounded-sm px-3 py-1.5">
-                      <span className="font-semibold text-zinc-900 mr-2">{index + 1}.</span>
-                      {step}
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-6">
+                  <div className="enterprise-card flex flex-col h-full bg-slate-900 text-white p-8 space-y-6 shadow-xl shadow-slate-200">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 opacity-60">
+                        <ShieldCheck className="w-4 h-4" />
+                        <span className="text-[11px] font-bold uppercase tracking-widest">Bridge Roadmap</span>
+                      </div>
+                      <h3 className="text-xl font-bold tracking-tight">Direct action steps for role eligibility.</h3>
+                    </div>
+                    <div className="space-y-4 pt-2">
+                      {response.bridge_steps.map((step, idx) => (
+                        <div key={idx} className="flex gap-4">
+                          <span className="shrink-0 w-6 h-6 rounded border border-white/20 flex items-center justify-center text-[10px] font-bold font-mono">
+                            {idx + 1}
+                          </span>
+                          <p className="text-xs font-medium text-slate-300 leading-relaxed tracking-normal">
+                            {step}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    {!user && (
+                      <div className="pt-8 mt-auto border-t border-white/10 space-y-4">
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Account Required</p>
+                        <Link to="/signup" className="enterprise-button h-10 w-full flex items-center justify-center text-xs">
+                          Save Full Report
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              <div className="flex justify-center pt-8">
+                <button
+                  onClick={() => setResponse(null)}
+                  className="text-[10px] font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-colors flex items-center gap-2"
+                >
+                  <ArrowRight className="w-3.5 h-3.5 rotate-180" />
+                  New Analysis
+                </button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </section>
   );
 }
