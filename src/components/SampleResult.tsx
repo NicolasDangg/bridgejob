@@ -15,7 +15,7 @@ type MatchItem = {
 
 type FitResponse = {
   job_title: string;
-  overall_fit: 'STRONG' | 'MODERATE' | 'WEAK' | 'SEVERELY UNDERQUALIFIED';
+  overall_fit: 'EXCELLENCE' | 'STRONG' | 'MODERATE' | 'WEAK' | 'SEVERELY UNDERQUALIFIED';
   overall_summary: string;
   strong_matches: MatchItem[];
   partial_matches: MatchItem[];
@@ -173,8 +173,10 @@ export default function SampleResult() {
                 </div>
                 <div className="flex flex-col w-48 mr-[65px] space-y-0">
                   <div className="flex items-baseline gap-1 leading-none">
-                    <span className={`text-3xl font-bold tracking-tighter leading-none ${response.readiness_score < 40 ? 'text-red-600' :
-                      response.readiness_score < 70 ? 'text-amber-600' : 'text-emerald-600'
+                    <span className={`text-3xl font-bold tracking-tighter leading-none ${response.readiness_score > 90 ? 'text-indigo-600' :
+                      response.readiness_score > 75 ? 'text-emerald-600' :
+                      response.readiness_score > 45 ? 'text-amber-600' :
+                      response.readiness_score > 25 ? 'text-red-600' : 'text-rose-700'
                       }`}>
                       {response.readiness_score}%
                     </span>
@@ -182,17 +184,23 @@ export default function SampleResult() {
                   </div>
 
                   <div className="space-y-1.5 pt-1">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-widest inline-block ${response.readiness_score < 40 ? 'text-red-600 bg-red-50 border-red-100' :
-                      response.readiness_score < 70 ? 'text-amber-600 bg-amber-50 border-amber-100' : 'text-emerald-600 bg-emerald-50 border-emerald-100'
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-widest inline-block ${response.readiness_score > 90 ? 'text-indigo-600 bg-indigo-50 border-indigo-100' :
+                      response.readiness_score > 75 ? 'text-emerald-600 bg-emerald-50 border-emerald-100' :
+                      response.readiness_score > 45 ? 'text-amber-600 bg-amber-50 border-amber-100' :
+                      response.readiness_score > 25 ? 'text-red-600 bg-red-50 border-red-100' : 'text-rose-700 bg-rose-50 border-rose-100'
                       }`}>
-                      {response.readiness_score < 40 ? 'Weak Fit' :
-                        response.readiness_score < 70 ? 'Moderate Fit' : 'Strong Match'}
+                      {response.readiness_score > 90 ? 'Excellence' :
+                        response.readiness_score > 75 ? 'Strong Match' :
+                          response.readiness_score > 45 ? 'Moderate Fit' :
+                            response.readiness_score > 25 ? 'Weak Fit' : 'Severely Underqualified'}
                     </span>
 
                     <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden border border-border-subtle">
                       <div
-                        className={`h-full transition-all duration-1000 ease-out ${response.readiness_score < 40 ? 'bg-red-600' :
-                          response.readiness_score < 70 ? 'bg-amber-600' : 'bg-emerald-600'
+                        className={`h-full transition-all duration-1000 ease-out ${response.readiness_score > 90 ? 'bg-indigo-600' :
+                          response.readiness_score > 75 ? 'bg-emerald-600' :
+                          response.readiness_score > 45 ? 'bg-amber-600' :
+                          response.readiness_score > 25 ? 'bg-red-600' : 'bg-rose-700'
                           }`}
                         style={{ width: `${response.readiness_score}%` }}
                       />

@@ -28,7 +28,7 @@ type MatchItem = {
 
 type FitResponse = {
   job_title: string;
-  overall_fit: 'STRONG' | 'MODERATE' | 'WEAK' | 'SEVERELY UNDERQUALIFIED';
+  overall_fit: 'EXCELLENCE' | 'STRONG' | 'MODERATE' | 'WEAK' | 'SEVERELY UNDERQUALIFIED';
   overall_summary: string;
   strong_matches: MatchItem[];
   partial_matches: MatchItem[];
@@ -75,9 +75,11 @@ function PriorityBadge({ priority }: { priority?: string }) {
 
 function StatusBadge({ type }: { type: string }) {
   const styles = {
+    EXCELLENCE: 'text-indigo-600 bg-indigo-50 border-indigo-100',
     STRONG: 'text-emerald-600 bg-emerald-50 border-emerald-100',
     MODERATE: 'text-amber-600 bg-amber-50 border-amber-100',
     WEAK: 'text-red-600 bg-red-50 border-red-100',
+    'SEVERELY UNDERQUALIFIED': 'text-rose-700 bg-rose-50 border-rose-100',
   }[type] || 'text-slate-600 bg-slate-50 border-slate-100';
 
   return (
