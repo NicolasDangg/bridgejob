@@ -1,12 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { handleAnalyze } from './api/analyze/handleAnalyze.js';
-import {
-  validateAnalyzeRequestShape,
-  validateAnalyzeRequestSemantic,
-} from './api/analyze/validateAnalyzeRequest.js';
-import { fail, sendJson } from './api/analyze/responseEnvelope.js';
+import analyzeHandler from '../api/analyze.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(__dirname, '..', 'dist');
@@ -23,39 +18,9 @@ app.use((req, res, next) => {
   next();
 });
 
-app.post(
-  '/api/analyze',
-  validateAnalyzeRequestShape,
-  validateAnalyzeRequestSemantic,
-  handleAnalyze,
-);
-
-app.use('/api', (err, _req, res, _next) => {
-  if (err instanceof SyntaxError && 'body' in err) {
-    return sendJson(res, 400, fail('BAD_REQUEST', 'Request body must be valid JSON.'));
-  }
-
-  if (err?.kind === 'BAD_REQUEST') {
-    return sendJson(res, 400, fail('BAD_REQUEST', err.message));
-  }
-
-  if (err?.kind === 'UNPROCESSABLE_ENTITY') {
-    return sendJson(res, 422, fail('UNPROCESSABLE_ENTITY', err.message));
-  }
-
-  const domainErrorCodes = new Set([
-    'ANALYZE_TIMEOUT',
-    'ANALYZE_CONFIG',
-    'ANALYZE_UPSTREAM',
-    'ANALYZE_INVALID_RESPONSE',
-  ]);
-
-  if (domainErrorCodes.has(err?.code)) {
-    return sendJson(res, 500, fail('INTERNAL_ERROR', err.message));
-  }
-
-  return sendJson(res, 500, fail('INTERNAL_ERROR', 'Internal server error.'));
-});
+// Use the Vercel serverless function for Express (both dev and production)
+app.post('/api/analyze', analyzeHandler);
+app.options('/api/analyze', analyzeHandler);
 
 app.use(express.static(distDir));
 

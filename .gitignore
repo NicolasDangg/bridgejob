@@ -38,3 +38,6 @@ package-lock.json
 yarn.lock
 # Worktrees
 .worktrees/
+
+# MD Files
+API_ARCHITECTURE.md

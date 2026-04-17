@@ -6,7 +6,7 @@ function isJsonResponse(response) {
 function normalizeBaseUrl(baseUrl) {
   if (!baseUrl) return '';
 
-  return baseUrl.replace(//+$/, '');
+  return baseUrl.replace(/\/+$/, '');
 }
 
 export function buildAnalyzeEndpoint(baseUrl) {
