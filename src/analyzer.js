@@ -26,8 +26,8 @@ function withTimeout(promise, timeoutMs) {
 function stripMarkdownCodeFences(text) {
   return text
     .trim()
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/i, '')
+    .replace(/^```[^\n]*\n?/i, '')
+    .replace(/\n?```\s*$/i, '')
     .trim();
 }
 
@@ -38,10 +38,16 @@ function extractJsonCandidate(text) {
     JSON.parse(cleaned);
     return cleaned;
   } catch {
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (match) {
-      return match[0].trim();
+    const objectMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (objectMatch) {
+      return objectMatch[0].trim();
     }
+
+    const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
+    if (arrayMatch) {
+      return arrayMatch[0].trim();
+    }
+
     return cleaned;
   }
 }
@@ -77,6 +83,16 @@ function normalizeStringArray(value) {
 
   const normalized = normalizeString(value);
   return normalized ? [normalized] : [];
+}
+
+function pickFirstDefined(...values) {
+  for (const value of values) {
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+
+  return undefined;
 }
 
 function normalizeMatchItem(item, kind) {
@@ -154,7 +170,13 @@ function fallbackReadinessScore(result) {
 
 function normalizeAnalysisResult(result) {
   const readinessScoreCandidate = coerceNumber(
-    result?.readiness_score ?? result?.readinessScore ?? result?.score,
+    pickFirstDefined(
+      result?.readiness_score,
+      result?.readinessScore,
+      result?.score,
+      result?.readiness,
+      result?.match_score,
+    ),
   );
 
   const readinessScore = Number.isFinite(readinessScoreCandidate)
@@ -162,21 +184,38 @@ function normalizeAnalysisResult(result) {
     : fallbackReadinessScore(result);
 
   return {
-    job_title: normalizeString(result?.job_title ?? result?.jobTitle ?? result?.title),
+    job_title: normalizeString(
+      pickFirstDefined(result?.job_title, result?.jobTitle, result?.title, result?.role, result?.position),
+    ),
     overall_fit: normalizeEnum(
-      result?.overall_fit ?? result?.overallFit ?? result?.fit,
+      pickFirstDefined(result?.overall_fit, result?.overallFit, result?.fit, result?.rating),
       ['STRONG', 'MODERATE', 'WEAK', 'SEVERELY UNDERQUALIFIED'],
     ),
-    overall_summary: normalizeString(result?.overall_summary ?? result?.overallSummary ?? result?.summary),
-    strong_matches: normalizeMatchArray(result?.strong_matches ?? result?.strongMatches, 'strong'),
-    partial_matches: normalizeMatchArray(result?.partial_matches ?? result?.partialMatches, 'partial'),
-    gaps: normalizeMatchArray(result?.gaps ?? result?.missing_skills ?? result?.missingSkills, 'gap'),
-    noise_skills: normalizeStringArray(result?.noise_skills ?? result?.noiseSkills ?? result?.noise),
+    overall_summary: normalizeString(
+      pickFirstDefined(result?.overall_summary, result?.overallSummary, result?.summary, result?.analysis_summary),
+    ),
+    strong_matches: normalizeMatchArray(
+      pickFirstDefined(result?.strong_matches, result?.strongMatches, result?.strengths, result?.matches),
+      'strong',
+    ),
+    partial_matches: normalizeMatchArray(
+      pickFirstDefined(result?.partial_matches, result?.partialMatches, result?.partial_match, result?.partial),
+      'partial',
+    ),
+    gaps: normalizeMatchArray(
+      pickFirstDefined(result?.gaps, result?.missing_skills, result?.missingSkills, result?.weaknesses),
+      'gap',
+    ),
+    noise_skills: normalizeStringArray(
+      pickFirstDefined(result?.noise_skills, result?.noiseSkills, result?.noise, result?.irrelevant_skills),
+    ),
     readiness_score: readinessScore,
     bridge_steps: normalizeStringArray(
-      result?.bridge_steps ?? result?.bridgeSteps ?? result?.next_steps ?? result?.nextSteps,
+      pickFirstDefined(result?.bridge_steps, result?.bridgeSteps, result?.next_steps, result?.nextSteps, result?.action_steps),
     ),
-    analyst_note: normalizeString(result?.analyst_note ?? result?.analystNote),
+    analyst_note: normalizeString(
+      pickFirstDefined(result?.analyst_note, result?.analystNote, result?.note, result?.notes),
+    ),
   };
 }
 
