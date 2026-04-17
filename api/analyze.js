@@ -1,4 +1,10 @@
 import { analyzeSkills } from '../src/analyzer.js';
+import { fail, ok } from '../src/api/analyze/responseEnvelope.js';
+import {
+  MIN_JD_LENGTH,
+  MIN_SKILLS_LENGTH,
+  asTrimmedString,
+} from '../src/api/analyze/validateAnalyzeRequest.js';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -6,8 +12,6 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-const MIN_JD_LENGTH = 50;
-const MIN_SKILLS_LENGTH = 20;
 const DOMAIN_ERROR_CODES = new Set([
   'ANALYZE_TIMEOUT',
   'ANALYZE_CONFIG',
@@ -21,27 +25,6 @@ function applyCorsHeaders(res) {
   }
 }
 
-function ok(data) {
-  return {
-    success: true,
-    data,
-    error: null,
-  };
-}
-
-function fail(code, message, details) {
-  const error = { code, message };
-  if (details !== undefined) {
-    error.details = details;
-  }
-
-  return {
-    success: false,
-    data: null,
-    error,
-  };
-}
-
 function sendJson(res, statusCode, payload) {
   applyCorsHeaders(res);
   res.statusCode = statusCode;
@@ -53,10 +36,6 @@ function createRequestError(kind, message) {
   const err = new Error(message);
   err.kind = kind;
   return err;
-}
-
-function asTrimmedString(value) {
-  return typeof value === 'string' ? value.trim() : null;
 }
 
 function parseRequestBody(req) {
@@ -125,6 +104,7 @@ export default async function handler(req, res) {
   try {
     const body = parseRequestBody(req);
     const { jd, skills } = validateAnalyzeInput(body);
+    req.analyzeInput = { jd, skills };
     const result = await analyzeSkills(jd, skills);
     return sendJson(res, 200, ok(result));
   } catch (err) {
