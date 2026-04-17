@@ -29,6 +29,9 @@ For every GAP and PARTIAL MATCH, provide:
 Additional rules:
 - Ignore filler JD language: "strong communicator", "team player", "fast learner" — flag these as NOISE, do not treat as real requirements
 - If a skill appears repeatedly or with emphasis in the JD, mark it HIGH PRIORITY
+- If the candidate exceeds a requirement in any way (for example, more years of experience than requested, a higher skill level than requested, or broader scope than requested), treat that as a STRONG MATCH or stronger, never as a GAP
+- Never flag an exceeded requirement as a priority gap
+- Never lower readiness_score because the candidate exceeds the requirement
 - Do not invent skills the candidate hasn't mentioned
 - Do not be encouraging for encouragement's sake — if the candidate is severely underqualified, say so clearly and explain why
 - If the JD is too vague to extract meaningful requirements, say so and list what little you could extract
