@@ -1,9 +1,5 @@
 import { buildSystemPrompt, buildUserPrompt } from './prompt.js';
 
-const FIT_VALUES = new Set(['STRONG', 'MODERATE', 'WEAK', 'SEVERELY UNDERQUALIFIED']);
-const PRIORITY_VALUES = new Set(['CRITICAL', 'IMPORTANT', 'NICE TO HAVE']);
-const LEARNABILITY_VALUES = new Set(['FAST', 'MEDIUM', 'SLOW']);
-
 function createDomainError(code, message, details) {
   const err = new Error(message);
   err.code = code;
@@ -27,65 +23,161 @@ function withTimeout(promise, timeoutMs) {
   });
 }
 
-function isNonEmptyString(value) {
-  return typeof value === 'string' && value.trim() !== '';
+function stripMarkdownCodeFences(text) {
+  return text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
 }
 
-function isStringArray(value) {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+function extractJsonCandidate(text) {
+  const cleaned = stripMarkdownCodeFences(text);
+
+  try {
+    JSON.parse(cleaned);
+    return cleaned;
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      return match[0].trim();
+    }
+    return cleaned;
+  }
 }
 
-function isStrongMatchArray(value) {
-  return (
-    Array.isArray(value) &&
-    value.every((item) => isNonEmptyString(item?.skill) && (item.note === undefined || typeof item.note === 'string'))
-  );
-}
-
-function isPartialMatchArray(value) {
-  return (
-    Array.isArray(value) &&
-    value.every((item) =>
-      isNonEmptyString(item?.skill) &&
-      isNonEmptyString(item?.gap_detail) &&
-      PRIORITY_VALUES.has(item?.priority) &&
-      LEARNABILITY_VALUES.has(item?.learnability) &&
-      isNonEmptyString(item?.action)
-    )
-  );
-}
-
-function isGapArray(value) {
-  return (
-    Array.isArray(value) &&
-    value.every((item) =>
-      isNonEmptyString(item?.skill) &&
-      PRIORITY_VALUES.has(item?.priority) &&
-      LEARNABILITY_VALUES.has(item?.learnability) &&
-      isNonEmptyString(item?.action)
-    )
-  );
-}
-
-function hasValidAnalysisShape(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return false;
+function coerceNumber(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
   }
 
-  return (
-    isNonEmptyString(value.job_title) &&
-    FIT_VALUES.has(value.overall_fit) &&
-    isNonEmptyString(value.overall_summary) &&
-    isStrongMatchArray(value.strong_matches) &&
-    isPartialMatchArray(value.partial_matches) &&
-    isGapArray(value.gaps) &&
-    isStringArray(value.noise_skills) &&
-    Number.isFinite(value.readiness_score) &&
-    value.readiness_score >= 0 &&
-    value.readiness_score <= 100 &&
-    isStringArray(value.bridge_steps) &&
-    isNonEmptyString(value.analyst_note)
+  if (typeof value === 'string') {
+    const parsed = Number(value.trim());
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return undefined;
+}
+
+function normalizeString(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeEnum(value, allowed) {
+  const candidate = normalizeString(value).toUpperCase();
+  return allowed.includes(candidate) ? candidate : '';
+}
+
+function normalizeStringArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeString(item)).filter(Boolean);
+  }
+
+  const normalized = normalizeString(value);
+  return normalized ? [normalized] : [];
+}
+
+function normalizeMatchItem(item, kind) {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    return null;
+  }
+
+  const skill = normalizeString(item.skill ?? item.name ?? item.title);
+  if (!skill) {
+    return null;
+  }
+
+  if (kind === 'strong') {
+    const note = normalizeString(item.note ?? item.evidence ?? item.description ?? item.details);
+    return {
+      skill,
+      note,
+    };
+  }
+
+  const gapDetail = normalizeString(
+    item.gap_detail ?? item.gapDetail ?? item.detail ?? item.note ?? item.evidence ?? item.description,
   );
+  const priority = normalizeEnum(item.priority, ['CRITICAL', 'IMPORTANT', 'NICE TO HAVE']);
+  const learnability = normalizeEnum(item.learnability, ['FAST', 'MEDIUM', 'SLOW']);
+  const action = normalizeString(item.action ?? item.suggestion ?? item.recommendation ?? item.next_step);
+
+  const normalized = { skill };
+
+  if (gapDetail) {
+    normalized.gap_detail = gapDetail;
+  }
+  if (priority) {
+    normalized.priority = priority;
+  }
+  if (learnability) {
+    normalized.learnability = learnability;
+  }
+  if (action) {
+    normalized.action = action;
+  }
+
+  return normalized;
+}
+
+function normalizeMatchArray(value, kind) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((item) => normalizeMatchItem(item, kind)).filter(Boolean);
+}
+
+function fallbackReadinessScore(result) {
+  const fit = normalizeEnum(result?.overall_fit ?? result?.overallFit ?? result?.fit, [
+    'STRONG',
+    'MODERATE',
+    'WEAK',
+    'SEVERELY UNDERQUALIFIED',
+  ]);
+
+  switch (fit) {
+    case 'STRONG':
+      return 90;
+    case 'MODERATE':
+      return 65;
+    case 'WEAK':
+      return 35;
+    case 'SEVERELY UNDERQUALIFIED':
+      return 10;
+    default:
+      return 50;
+  }
+}
+
+function normalizeAnalysisResult(result) {
+  const readinessScoreCandidate = coerceNumber(
+    result?.readiness_score ?? result?.readinessScore ?? result?.score,
+  );
+
+  const readinessScore = Number.isFinite(readinessScoreCandidate)
+    ? Math.max(0, Math.min(100, Math.round(readinessScoreCandidate)))
+    : fallbackReadinessScore(result);
+
+  return {
+    job_title: normalizeString(result?.job_title ?? result?.jobTitle ?? result?.title),
+    overall_fit: normalizeEnum(
+      result?.overall_fit ?? result?.overallFit ?? result?.fit,
+      ['STRONG', 'MODERATE', 'WEAK', 'SEVERELY UNDERQUALIFIED'],
+    ),
+    overall_summary: normalizeString(result?.overall_summary ?? result?.overallSummary ?? result?.summary),
+    strong_matches: normalizeMatchArray(result?.strong_matches ?? result?.strongMatches, 'strong'),
+    partial_matches: normalizeMatchArray(result?.partial_matches ?? result?.partialMatches, 'partial'),
+    gaps: normalizeMatchArray(result?.gaps ?? result?.missing_skills ?? result?.missingSkills, 'gap'),
+    noise_skills: normalizeStringArray(result?.noise_skills ?? result?.noiseSkills ?? result?.noise),
+    readiness_score: readinessScore,
+    bridge_steps: normalizeStringArray(
+      result?.bridge_steps ?? result?.bridgeSteps ?? result?.next_steps ?? result?.nextSteps,
+    ),
+    analyst_note: normalizeString(result?.analyst_note ?? result?.analystNote),
+  };
 }
 
 export async function analyzeSkills(jd, skills, fetchImpl, options = {}) {
@@ -107,7 +199,6 @@ export async function analyzeSkills(jd, skills, fetchImpl, options = {}) {
         },
         body: JSON.stringify({
           model: 'llama-3.1-8b-instant',
-          response_format: { type: 'json_object' },
           messages: [
             { role: 'system', content: buildSystemPrompt() },
             { role: 'user', content: buildUserPrompt(jd, skills) },
@@ -148,43 +239,20 @@ export async function analyzeSkills(jd, skills, fetchImpl, options = {}) {
     throw createDomainError('ANALYZE_INVALID_RESPONSE', 'Groq returned an unexpected response format.');
   }
 
-  const normalized = raw
-    .replace(/^```(json)?\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim();
+  const candidate = extractJsonCandidate(raw);
 
-  let result;
+  let parsed;
   try {
-    result = JSON.parse(normalized);
-  } catch (e) {
-    const preview = normalized.substring(0, 200);
-    throw createDomainError('ANALYZE_INVALID_RESPONSE', `AI returned non-JSON response. First 200 chars: ${preview}`);
+    parsed = JSON.parse(candidate);
+  } catch {
+    throw createDomainError('ANALYZE_INVALID_RESPONSE', 'AI returned non-JSON response.');
   }
 
-  if (!hasValidAnalysisShape(result)) {
-    const missingFields = [];
-    if (!result.job_title) missingFields.push('job_title');
-    if (!result.overall_fit) missingFields.push('overall_fit');
-    if (!result.overall_summary) missingFields.push('overall_summary');
-    if (!Array.isArray(result.strong_matches)) missingFields.push('strong_matches');
-    if (!Array.isArray(result.partial_matches)) missingFields.push('partial_matches');
-    if (!Array.isArray(result.gaps)) missingFields.push('gaps');
-    if (!Array.isArray(result.noise_skills)) missingFields.push('noise_skills');
-    if (typeof result.readiness_score !== 'number') missingFields.push('readiness_score');
-    if (!Array.isArray(result.bridge_steps)) missingFields.push('bridge_steps');
-    if (!result.analyst_note) missingFields.push('analyst_note');
-
-    const details = missingFields.length > 0
-      ? `Missing or invalid fields: ${missingFields.join(', ')}`
-      : 'Schema validation failed';
-
-    throw createDomainError(
-      'ANALYZE_INVALID_RESPONSE',
-      `AI returned invalid JSON schema. ${details}`,
-    );
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw createDomainError('ANALYZE_INVALID_RESPONSE', 'AI returned non-object JSON response.');
   }
 
-  return result;
+  return normalizeAnalysisResult(parsed);
 }
 
 export { createDomainError };
