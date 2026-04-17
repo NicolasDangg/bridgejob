@@ -21,28 +21,6 @@ export default function Login() {
     setStatusMessage(null);
 
     try {
-      // Hard-coded Test Credentials Bypass (DEV ONLY)
-      if (import.meta.env.DEV) {
-        try {
-          const { testUser } = await import('../lib/testCredentials.json');
-          if (email === testUser.email && password === testUser.password) {
-            const mockUser = {
-              id: 'test-user-id',
-              email: testUser.email,
-              user_metadata: { full_name: testUser.fullName },
-              aud: 'authenticated',
-              role: 'authenticated',
-              created_at: new Date().toISOString(),
-            };
-
-            setUser(mockUser as any);
-            navigate("/dashboard");
-            return;
-          }
-        } catch (e) {
-          console.log("No test credentials file found, proceeding with Supabase.");
-        }
-      }
 
       if (!supabase) {
         setError("Supabase not configured.");
