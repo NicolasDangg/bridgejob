@@ -1,11 +1,11 @@
 import { useAuth } from "../lib/AuthContext";
 import { Link } from "react-router-dom";
-import { 
-  User, 
-  Settings, 
-  Shield, 
-  Bell, 
-  CreditCard, 
+import {
+  User,
+  Settings,
+  Shield,
+  Bell,
+  CreditCard,
   ChevronRight,
   Mail,
   Lock,
@@ -26,9 +26,9 @@ export default function Accounts() {
             <h1 className="text-xl font-bold text-slate-900">Access Restricted</h1>
             <p className="text-xs text-slate-500 leading-relaxed font-medium">Please authenticate to manage your professional profile and account settings.</p>
           </div>
-          <a href="/login" className="enterprise-button h-10 px-8 flex items-center justify-center mx-auto">
+          <Link to="/login" className="enterprise-button h-10 px-8 flex items-center justify-center mx-auto">
             Go to Login
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -123,7 +123,7 @@ export default function Accounts() {
               </div>
             </div>
           ))}
-          
+
           {/* Help/Support Section */}
           <div className="enterprise-card bg-slate-900 h-full flex flex-col justify-center p-8 space-y-4">
             <h3 className="text-white text-lg font-bold tracking-tight">Need assistance?</h3>
