@@ -2,12 +2,18 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
+export interface UserMetadata {
+  full_name?: string;
+  plan?: 'free' | 'pro' | 'enterprise';
+}
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
   setUser: (user: User | null) => void;
+  userPlan: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,8 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(user);
   };
 
+  const getUserPlan = (): string => {
+    const metadata = user?.user_metadata as UserMetadata | undefined;
+    const plan = metadata?.plan || 'free';
+    return plan.charAt(0).toUpperCase() + plan.slice(1) + ' Plan';
+  };
+
   return (
-    <AuthContext.Provider value={{ session, user, loading, signOut, setUser: setManualUser }}>
+    <AuthContext.Provider value={{ session, user, loading, signOut, setUser: setManualUser, userPlan: getUserPlan() }}>
       {children}
     </AuthContext.Provider>
   );

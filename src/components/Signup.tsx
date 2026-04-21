@@ -1,131 +1,122 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { buildAuthRedirectUrl, supabase } from '../lib/supabase';
+import { useAuth } from '../lib/AuthContext';
 
 export default function Signup() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [sent, setSent] = useState(false);
   const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supabase) return;
-
     setLoading(true);
     setError(null);
+    setSent(false);
 
-    const { error } = await supabase.auth.signUp({
+    if (import.meta.env.DEV && !supabase) {
+      const mockUser = {
+        id: `user-${Date.now()}`,
+        email,
+        user_metadata: { full_name: fullName, plan: 'free' },
+        aud: 'authenticated',
+        role: 'authenticated',
+        created_at: new Date().toISOString(),
+      };
+      setUser(mockUser as any);
+      setLoading(false);
+      navigate('/dashboard');
+      return;
+    }
+
+    if (!supabase) {
+      setError('Backend not configured.');
+      setLoading(false);
+      return;
+    }
+
+    const redirectTo = buildAuthRedirectUrl('/dashboard');
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      password,
       options: {
-        data: {
-          full_name: fullName,
-        },
+        emailRedirectTo: redirectTo,
+        data: { full_name: fullName, plan: 'free' },
       },
     });
 
     if (error) {
       setError(error.message);
-      setLoading(false);
     } else {
-      setSuccess(true);
-      setLoading(false);
-      // Optional: Auto-redirect or ask to check email
-      setTimeout(() => navigate("/login"), 3000);
+      setSent(true);
+      setTimeout(() => navigate('/login'), 2500);
     }
-  };
 
-  const containerVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.6 },
-    },
+    setLoading(false);
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-6rem)] p-6">
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="w-full max-w-md rounded-[2.5rem] border border-black/10 bg-white/70 backdrop-blur-md p-10 shadow-[0_12px_48px_rgba(0,0,0,0.08)]"
-      >
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-sans font-extrabold text-zinc-900 tracking-tight">Create Account</h1>
-          <p className="mt-2 text-zinc-700">Start your career intelligence journey today.</p>
+    <div className="flex-1 bg-surface-white flex items-center justify-center p-6">
+      <div className="w-full max-w-sm space-y-8">
+        <div className="text-center space-y-2">
+          <div className="w-10 h-10 bg-slate-900 rounded-md flex items-center justify-center text-white text-sm font-bold mx-auto mb-4">BJ</div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Create your account</h1>
+          <p className="text-sm text-slate-500 font-medium">Enter your details and we’ll send you a magic link.</p>
         </div>
 
-        {success ? (
-          <div className="text-center space-y-4">
-            <div className="bg-emerald-50 text-emerald-900 p-4 rounded-2xl border border-emerald-100">
-              <p className="font-bold">Check your email!</p>
-              <p className="text-sm">We've sent a confirmation link to your inbox. Redirecting to login...</p>
+        <div className="enterprise-card p-6 bg-white space-y-5">
+          {sent ? (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+              Magic link sent. Check your email to finish creating your account.
             </div>
-          </div>
-        ) : (
-          <form className="space-y-6" onSubmit={handleSignup}>
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-700 ml-1">Full Name</label>
+          ) : null}
+
+          <form className="space-y-4" onSubmit={handleSignup}>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Full Name</label>
               <input
                 type="text"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full rounded-2xl border border-black/10 bg-white/50 px-5 py-4 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                className="enterprise-input"
                 placeholder="John Doe"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-700 ml-1">Email</label>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Email Address</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-2xl border border-black/10 bg-white/50 px-5 py-4 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
-                placeholder="you@domain.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-zinc-700 ml-1">Password</label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-2xl border border-black/10 bg-white/50 px-5 py-4 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
-                placeholder="••••••••"
+                className="enterprise-input"
+                placeholder="name@company.com"
               />
             </div>
 
-            {error && <p className="text-xs text-red-600 ml-1">{error}</p>}
+            {error && <p className="text-[11px] text-red-600 font-medium">{error}</p>}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 rounded-full bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800 transition-all shadow-xl shadow-black/20 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+              className="w-full enterprise-button h-10 mt-2"
             >
-              {loading ? "Creating Account..." : "Create Account"}
+              {loading ? 'Sending Link...' : 'Create Magic Link'}
             </button>
           </form>
-        )}
-
-        <div className="mt-10 text-center">
-          <p className="text-sm text-zinc-700">
-            Already have an account?{" "}
-            <Link to="/login" className="font-bold text-zinc-900 hover:underline">
-              Log in
-            </Link>
-          </p>
         </div>
-      </motion.div>
+
+        <p className="text-center text-xs text-slate-500 font-medium">
+          Already have an account?{' '}
+          <Link to="/login" className="text-slate-900 font-bold hover:underline underline-offset-4 decoration-slate-300">
+            Log in
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

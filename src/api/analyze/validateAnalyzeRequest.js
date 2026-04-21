@@ -1,7 +1,9 @@
 const MIN_JD_LENGTH = 50;
 const MIN_SKILLS_LENGTH = 20;
 
-function asTrimmedString(value) {
+export { MIN_JD_LENGTH, MIN_SKILLS_LENGTH };
+
+export function asTrimmedString(value) {
   return typeof value === 'string' ? value.trim() : null;
 }
 

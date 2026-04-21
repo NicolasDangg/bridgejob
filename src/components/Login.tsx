@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
@@ -9,60 +9,54 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const { setUser } = useAuth();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     setLoading(true);
     setError(null);
+    setStatusMessage(null);
 
-    // Hard-coded Test Credentials Bypass (DEV ONLY)
-    if (import.meta.env.DEV) {
-      try {
-        const { testUser } = await import('../lib/testCredentials.json');
-        if (email === testUser.email && password === testUser.password) {
-          // Mock a user object
-          const mockUser = {
-            id: 'test-user-id',
-            email: testUser.email,
-            user_metadata: { full_name: testUser.fullName },
-            aud: 'authenticated',
-            role: 'authenticated',
-            created_at: new Date().toISOString()
-          };
-          
-          // Use the manual setter to update AuthContext
-          setUser(mockUser as any);
-          
-          setLoading(false);
-          navigate("/dashboard");
+    try {
+
+      if (!supabase) {
+        setError("Supabase not configured.");
+        return;
+      }
+
+      if (password.trim()) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          setError(error.message);
           return;
         }
-      } catch (e) {
-        // JSON file might not exist or be ignored
-        console.log("No test credentials file found, proceeding with Supabase.");
+
+        navigate("/dashboard");
+        return;
       }
-    }
 
-    if (!supabase) {
-      setError("Supabase not configured.");
-      setLoading(false);
-      return;
-    }
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: window.location.origin + '/dashboard',
+        },
+      });
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+      if (error) {
+        setError(error.message);
+        return;
+      }
 
-    if (error) {
-      setError(error.message);
+      setStatusMessage("Check your email for the magic link to sign in.");
+    } finally {
       setLoading(false);
-    } else {
-      setLoading(false);
-      navigate("/dashboard");
     }
   };
 
@@ -98,6 +92,7 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-2xl border border-black/10 bg-white/50 px-5 py-4 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
               placeholder="you@domain.com"
+              autoComplete="email"
             />
           </div>
           <div className="space-y-2">
@@ -107,15 +102,17 @@ export default function Login() {
             </div>
             <input
               type="password"
-              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-2xl border border-black/10 bg-white/50 px-5 py-4 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
-              placeholder="••••••••"
+              placeholder="Leave blank for a magic link"
+              autoComplete="current-password"
             />
+            <p className="ml-1 text-xs text-zinc-500">Leave blank to receive a magic link instead.</p>
           </div>
 
           {error && <p className="text-xs text-red-600 ml-1">{error}</p>}
+          {statusMessage && <p className="text-xs text-emerald-700 ml-1">{statusMessage}</p>}
 
           <button
             type="submit"

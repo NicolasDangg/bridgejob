@@ -1,12 +1,7 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { motion, type Variants } from "framer-motion";
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from "react-router-dom";
-import { useRef, ReactNode, useEffect } from "react";
-import { User as UserIcon, Settings, Shield, LogOut } from "lucide-react";
+import { motion } from "framer-motion";
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from "react-router-dom";
+import { useEffect, ReactNode } from "react";
+import { User as UserIcon, LogOut, LayoutDashboard, CreditCard, Sparkles, Mail } from "lucide-react";
 import Dashboard from "./components/Dashboard";
 import Pricing from "./components/Pricing";
 import Features from "./components/Features";
@@ -14,229 +9,193 @@ import Contact from "./components/Contact";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
 import Accounts from "./components/Accounts";
+import Privacy from "./components/Privacy";
+import Terms from "./components/Terms";
+import Security from "./components/Security";
+import Billing from "./components/Billing";
+import Notifications from "./components/Notifications";
 import SampleResult from "./components/SampleResult";
-import backgroundImage from "./assets/background.jpg";
+import { FeaturesShowcase } from "./components/FeaturesShowcase";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
-
   useEffect(() => {
-    window.scrollTo(0, 0);
+    if (pathname !== '/') {
+      window.scrollTo(0, 0);
+    }
   }, [pathname]);
-
   return null;
 }
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
-  
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 border-4 border-zinc-200 border-t-zinc-800 rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-[60vh] bg-surface-off-white">
+        <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
       </div>
     );
   }
-  
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
+  if (!user) return <div className="text-center p-12">Please log in to access this page.</div>;
   return <>{children}</>;
 }
 
+function NavLink({ to, children, icon: Icon }: { to: string, children: ReactNode, icon: any }) {
+  const { pathname } = useLocation();
+  const isActive = pathname === to;
+  return (
+    <Link
+      to={to}
+      className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-colors rounded-md ${isActive
+        ? "text-slate-900 bg-slate-100"
+        : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+        }`}
+    >
+      <Icon className="w-4 h-4" />
+      {children}
+    </Link>
+  );
+}
+
 function PageLayout({ children }: { children: ReactNode }) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, userPlan } = useAuth();
 
   return (
-    <div className="min-h-screen overflow-x-hidden relative">
-      {/* Fixed image background - persists across sections */}
-      <div className="fixed inset-0 z-0">
-        <img
-          src={backgroundImage}
-          alt="Background"
-          className="absolute inset-0 w-full h-full object-cover"
-          height={1080}
-          width={1920}
-        />
-      </div>
-
-      {/* Floating Navigation Bar */}
-      <nav className="fixed top-6 z-50 w-full px-6 flex justify-center">
-        <motion.div
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="flex items-center justify-between w-full max-w-5xl h-14 px-6 rounded-full bg-white/72 backdrop-blur-xl border border-black/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] ring-1 ring-black/[0.03] relative group"
-        >
-          <div className="absolute -inset-1 bg-gradient-to-r from-white/0 via-white/35 to-white/0 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-          <div className="flex items-center gap-8 relative z-10">
-            <Link to="/" className="font-sans font-extrabold text-xl text-zinc-900 tracking-tight">
+    <div className="min-h-screen bg-surface-off-white flex flex-col">
+      {/* Stable Header/Top Nav */}
+      <header className="sticky top-0 z-50 bg-white border-b border-border-subtle h-14 flex items-center shadow-sm">
+        <div className="container mx-auto max-w-7xl px-4 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <Link to="/" className="font-bold text-lg tracking-tight text-slate-900 flex items-center gap-2">
+              <div className="w-6 h-6 bg-slate-900 rounded-md flex items-center justify-center text-white text-[10px]">BJ</div>
               BridgeJob
             </Link>
-            <div className="hidden md:flex items-center gap-6">
-                {[
-                  { name: "Dashboard", path: "/dashboard" },
-                  { name: "Pricing", path: "/pricing" },
-                  { name: "Features", path: "/features" },
-                  { name: "Contact", path: "/contact" }
-                ].map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  className="text-sm font-medium text-zinc-700 hover:text-zinc-900 transition-colors"
-                >
-                  {item.name}
-                </Link>
-              ))}
-            </div>
+            <nav className="hidden md:flex items-center gap-1">
+              <NavLink to="/dashboard" icon={LayoutDashboard}>Dashboard</NavLink>
+              <NavLink to="/pricing" icon={CreditCard}>Pricing</NavLink>
+              <NavLink to="/features" icon={Sparkles}>Features</NavLink>
+              <NavLink to="/contact" icon={Mail}>Contact</NavLink>
+            </nav>
           </div>
 
-          <div className="flex items-center gap-4 relative z-10">
+          <div className="flex items-center gap-4">
             {user ? (
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-medium text-zinc-500 hidden sm:inline">{user.email}</span>
-                <Link 
-                  to="/accounts" 
-                  className="w-10 h-10 rounded-full bg-white border border-black/10 flex items-center justify-center hover:bg-zinc-50 hover:scale-105 transition-all shadow-sm group/profile"
-                  title="Account Settings"
+              <div className="flex items-center gap-3 pl-4 border-l border-border-subtle">
+                <div className="flex flex-col items-end hidden sm:flex">
+                  <span className="text-[11px] font-semibold text-slate-900">{user.email?.split('@')[0]}</span>
+                  <span className="text-[10px] text-slate-500">{userPlan}</span>
+                </div>
+                <Link
+                  to="/accounts"
+                  className="w-8 h-8 rounded-full bg-slate-50 border border-border-subtle flex items-center justify-center hover:bg-slate-100 transition-colors"
                 >
-                  <UserIcon className="w-5 h-5 text-zinc-700 group-hover/profile:text-zinc-900" />
+                  <UserIcon className="w-4 h-4 text-slate-600" />
                 </Link>
                 <button
                   onClick={signOut}
-                  className="p-2.5 rounded-full bg-white border border-black/10 hover:bg-red-50 hover:text-red-600 transition-all shadow-sm group/logout"
+                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
                   title="Sign out"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
             ) : (
-              <>
-                <Link to="/login" className="text-sm font-medium text-zinc-700 hover:text-zinc-900 transition-colors px-4 py-2">
-                  Login
+              <div className="flex items-center gap-3">
+                <Link to="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 px-3 py-1.5">
+                  Log in
                 </Link>
-                <Link to="/signup" className="text-sm font-semibold text-zinc-900 bg-white px-5 py-2 rounded-full border border-black/10 hover:bg-zinc-100 transition-all shadow-sm">
-                  Sign up
+                <Link to="/signup" className="enterprise-button">
+                  Get Started
                 </Link>
-              </>
+              </div>
             )}
           </div>
-        </motion.div>
-      </nav>
+        </div>
+      </header>
 
-      <main className="relative z-10 pt-24 min-h-screen">
+      <main className="flex-1 flex flex-col">
         {children}
       </main>
+
+      <footer className="bg-white border-t border-border-subtle py-8">
+        <div className="container mx-auto max-w-7xl px-4 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-slate-500">© 2026 BridgeJob Career Intelligence. All rights reserved.</p>
+          <div className="flex gap-6 text-xs text-slate-400">
+            <Link to="/privacy" className="hover:text-slate-600 transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
+            <Link to="/contact" className="hover:text-slate-600 transition-colors">Support</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
 
 function Hero() {
-  const sampleRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
-  const { user } = useAuth();
-
   const scrollToSample = () => {
-    sampleRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const handleAnalyzeClick = () => {
-    if (user) {
-      navigate('/dashboard');
-    } else {
-      navigate('/signup');
-    }
-  };
-
-  const containerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2,
-        delayChildren: 0.3,
-      },
-    },
-  };
-
-  const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.8,
-        ease: [0.21, 0.47, 0.32, 0.98],
-      },
-    },
+    document.getElementById('sample-result')?.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
-    <>
-      {/* Hero Section */}
-      <section className="relative w-full h-[calc(100vh-6rem)] flex flex-col items-center justify-center">
-        {/* Content Container with Glassy Fade Effect */}
-        <div className="relative z-20 flex items-center justify-center w-full max-w-5xl px-6">
-          <div className="absolute inset-0 -z-10 bg-white/45 backdrop-blur-md rounded-[4rem] scale-110 [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_70%)] opacity-95" />
-
-          <motion.div
-            className="text-center py-12"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
+    <section className="flex-1 flex flex-col items-center justify-center py-32 px-4 bg-surface-white">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-2xl text-center space-y-6"
+      >
+        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 uppercase tracking-wider border border-slate-200">
+          Career Intelligence
+        </div>
+        <h1 className="text-5xl font-bold tracking-tight text-slate-900 sm:text-6xl">
+          Close the gap between you and your dream job.
+        </h1>
+        <p className="text-lg text-slate-600 leading-relaxed max-w-xl mx-auto">
+          BridgeJob analyzes job descriptions against your experience to provide ranked readiness scores and actionable roadmaps. Trained by real-world data.
+        </p>
+        <div className="flex flex-col items-center gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
+            <Link to="/signup" className="enterprise-button h-11 px-8 flex items-center justify-center text-base">
+              Start Free Analysis
+            </Link>
+            <Link to="/dashboard" className="enterprise-button-outline h-11 px-8 flex items-center justify-center text-base">
+              Explore Dashboard
+            </Link>
+          </div>
+          <button
+            onClick={scrollToSample}
+            className="text-xs text-slate-400 hover:text-slate-600 font-bold uppercase tracking-widest transition-colors"
           >
-            <motion.span
-              variants={itemVariants}
-              className="block text-[10px] sm:text-xs uppercase tracking-[0.3em] font-semibold text-zinc-700 mb-4"
-            >
-              Career intelligence
-            </motion.span>
-
-            <motion.h1
-              variants={itemVariants}
-              className="text-4xl sm:text-6xl md:text-7xl font-sans font-extrabold text-zinc-900 mb-6 leading-[1.1] tracking-tight drop-shadow-sm"
-            >
-              Know exactly where <br className="hidden sm:block" /> you stand.
-            </motion.h1>
-
-            <motion.p
-              variants={itemVariants}
-              className="text-base sm:text-lg text-zinc-800 font-normal max-w-[520px] mx-auto mb-10 leading-relaxed"
-            >
-              Paste a job description and your skills. Get a readiness score,
-              every gap ranked by urgency, and a step-by-step plan to close them.
-            </motion.p>
-
-            <motion.div
-              variants={itemVariants}
-              className="flex flex-col sm:flex-row items-center justify-center gap-4"
-            >
-              <button
-                onClick={handleAnalyzeClick}
-                className="w-full sm:w-auto px-10 py-4 bg-white text-zinc-900 font-semibold rounded-full hover:bg-zinc-100 transition-all duration-300 shadow-xl shadow-black/20 hover:scale-[1.02] active:scale-[0.98]"
-              >
-                Analyze My Fit
-              </button>
-              <button
-                onClick={scrollToSample}
-                className="w-full sm:w-auto px-10 py-4 bg-white/70 text-zinc-900 font-medium border border-black/12 backdrop-blur-sm rounded-full hover:bg-white/85 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-              >
-                See a sample result
-              </button>
-            </motion.div>
-          </motion.div>
+            Look at a sample result
+          </button>
         </div>
-      </section>
 
-      {/* Sample Result Section */}
-      <section ref={sampleRef} className="min-h-screen flex items-center justify-center relative pt-14">
-        <div className="w-full max-w-none px-0 py-0">
-          <SampleResult />
+        <div className="pt-16 grid grid-cols-3 gap-8 py-12 border-t border-border-subtle mt-16 max-w-lg mx-auto">
+          <div className="text-center">
+            <div className="text-xl font-bold text-slate-900">10K+</div>
+            <div className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mt-1">Users</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-bold text-slate-900">95%</div>
+            <div className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mt-1">Accuracy</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xl font-bold text-slate-900">&lt;1 day</div>
+            <div className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mt-1">Gap Closing</div>
+          </div>
         </div>
-      </section>
+      </motion.div>
+    </section>
+  );
+}
+
+function LandingPage() {
+  return (
+    <>
+      <Hero />
+      <FeaturesShowcase />
+      <div id="sample-result" />
+      <SampleResult />
     </>
   );
 }
@@ -248,28 +207,54 @@ export default function App() {
         <ScrollToTop />
         <PageLayout>
           <Routes>
-            <Route path="/" element={<Hero />} />
-            <Route 
-              path="/dashboard" 
+            <Route path="/" element={<LandingPage />} />
+            <Route
+              path="/dashboard"
               element={
                 <ProtectedRoute>
                   <Dashboard />
                 </ProtectedRoute>
-              } 
+              }
             />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/features" element={<Features />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route 
-              path="/accounts" 
+            <Route
+              path="/accounts"
               element={
                 <ProtectedRoute>
                   <Accounts />
                 </ProtectedRoute>
-              } 
+              }
             />
+            <Route
+              path="/security"
+              element={
+                <ProtectedRoute>
+                  <Security />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/billing"
+              element={
+                <ProtectedRoute>
+                  <Billing />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
           </Routes>
         </PageLayout>
       </AuthProvider>

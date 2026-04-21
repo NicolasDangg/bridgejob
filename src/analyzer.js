@@ -42,6 +42,7 @@ export async function analyzeSkills(jd, skills, fetchImpl, options = {}) {
         },
         body: JSON.stringify({
           model: 'llama-3.1-8b-instant',
+          temperature: 0,
           messages: [
             { role: 'system', content: buildSystemPrompt() },
             { role: 'user', content: buildUserPrompt(jd, skills) },

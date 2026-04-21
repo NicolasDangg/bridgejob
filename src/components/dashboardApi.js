@@ -20,10 +20,10 @@ export function buildAnalyzeEndpoint(baseUrl) {
   }
 
   if (normalized.endsWith('/api')) {
-    return `${normalized}/analyze`;
+    return normalized + '/analyze';
   }
 
-  return `${normalized}/api/analyze`;
+  return normalized + '/api/analyze';
 }
 
 async function requestOnce(fetchFn, endpoint, input) {
@@ -40,7 +40,7 @@ async function requestOnce(fetchFn, endpoint, input) {
   }
 
   if (!isJsonResponse(response)) {
-    const err = new Error(`Analysis service error (${response.status}).`);
+    const err = new Error('Analysis service error (' + response.status + ').');
     err.status = response.status;
     throw err;
   }
