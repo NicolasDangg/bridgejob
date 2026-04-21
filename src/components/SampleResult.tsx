@@ -67,8 +67,7 @@ const mockAiResponse: FitResponse = {
     'Execute a mock data pipeline project using PostgreSQL and hiring API documentation.',
     'Draft a stakeholder communication plan for a high-priority recruitment cycle.',
     'Optimize professional portfolio to emphasize quantitative process improvements.',
-    'Participate in a 20-hour sandbox environment for cross-functional project management simulation.',
-    'Conduct a gap audit on local recruiting workflows against global enterprise standards.'
+    'Participate in a 20-hour sandbox environment for cross-functional project management simulation.'
   ],
   analyst_note:
     'Prioritize the SQL and ATS workflow gaps as these are non-negotiable hurdles for the screening stage. While the candidate\'s foundational process skills are excellent, the shift from internal coordination to external cross-functional stakeholder management requires a more robust "Product-Mindset" for operations. Closing the technical gaps first will unlock the credibility needed for the senior-level coordination responsibilities.',
