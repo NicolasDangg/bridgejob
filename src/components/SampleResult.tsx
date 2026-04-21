@@ -93,11 +93,17 @@ export default function SampleResult() {
   };
 
   return (
-    <section id="sample-result" className="bg-surface-white py-24 px-6 border-t border-border-subtle">
-      <div className="max-w-5xl mx-auto space-y-12">
-        <div className="text-center space-y-4 max-w-2xl mx-auto">
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900 italic">Try the analysis engine.</h2>
-          <p className="text-sm text-slate-600 leading-relaxed font-medium">
+    <section id="sample-result" className="bg-surface-white py-32 px-6 overflow-hidden">
+      <motion.div 
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="max-w-5xl mx-auto space-y-16"
+      >
+        <div className="text-center space-y-4 max-w-3xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 italic">Try the analysis engine.</h2>
+          <p className="text-base text-slate-600 leading-relaxed font-medium">
             Simulate a high-density intelligence report. Compare a complex job description against baseline candidate data to see how BridgeJob identifies gaps and generates roadmaps.
           </p>
         </div>
@@ -106,10 +112,15 @@ export default function SampleResult() {
           {!response ? (
             <motion.div
               key="analyzer"
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="flex items-center justify-center"
+              initial={{ opacity: 0, y: 40, scale: 0.95, rotate: -1 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ 
+                duration: 0.8, 
+                ease: [0.22, 1, 0.36, 1],
+                delay: 0.2
+              }}
+              className="flex items-center justify-center p-4"
             >
               <div className="enterprise-card w-full max-w-lg overflow-hidden">
                 <div className="px-6 py-4 bg-surface-off-white border-b border-border-subtle flex items-center justify-between">
@@ -315,7 +326,7 @@ export default function SampleResult() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </section>
   );
 }

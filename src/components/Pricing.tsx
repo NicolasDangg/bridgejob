@@ -1,14 +1,14 @@
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Check } from "lucide-react";
 import { useAuth } from "../lib/AuthContext";
+import ScrollFadeSection from "./ScrollFadeSection";
 
 export default function Pricing() {
   const { user } = useAuth();
 
   return (
     <div className="flex-1 bg-surface-off-white py-24 px-4 overflow-auto">
-      <div className="max-w-5xl mx-auto space-y-16">
+      <ScrollFadeSection className="max-w-5xl mx-auto space-y-16">
         <div className="text-center space-y-4">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pricing & Tiers</p>
           <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">Plans for active career growth.</h1>
@@ -87,7 +87,7 @@ export default function Pricing() {
             </div>
           ))}
         </div>
-      </div>
+      </ScrollFadeSection>
     </div>
   );
 }

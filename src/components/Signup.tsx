@@ -69,7 +69,7 @@ export default function Signup() {
 
         <div className="enterprise-card p-6 bg-white space-y-5">
           {sent ? (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
               Magic link sent. Check your email to finish creating your account.
             </div>
           ) : null}

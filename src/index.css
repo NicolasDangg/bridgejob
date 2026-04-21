@@ -20,7 +20,7 @@
 
 @layer base {
   body {
-    @apply bg-surface-off-white text-slate-900 font-sans antialiased;
+    @apply bg-gray-50 text-slate-900 font-sans antialiased;
     letter-spacing: -0.01em;
   }
 }

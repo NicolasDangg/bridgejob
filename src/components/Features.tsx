@@ -1,14 +1,14 @@
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { BarChart2, ShieldCheck, Zap, Layers } from "lucide-react";
 import { useAuth } from "../lib/AuthContext";
+import ScrollFadeSection from "./ScrollFadeSection";
 
 export default function Features() {
   const { user } = useAuth();
 
   return (
     <div className="flex-1 bg-surface-off-white py-24 px-4 overflow-auto">
-      <div className="max-w-5xl mx-auto space-y-16">
+      <ScrollFadeSection className="max-w-5xl mx-auto space-y-16">
         <div className="text-center space-y-4">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Core Capabilities</p>
           <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">Engineered for accuracy.</h1>
@@ -55,7 +55,7 @@ export default function Features() {
           ))}
         </div>
 
-        <div className="bg-slate-900 rounded-lg p-12 text-center space-y-6">
+        <div className="bg-slate-900 rounded-md p-12 text-center space-y-6">
           <h3 className="text-2xl font-bold text-white tracking-tight">Ready to optimize your next move?</h3>
           <p className="text-slate-400 max-w-md mx-auto text-sm leading-relaxed">
             Join thousands of professionals using BridgeJob to navigate their career with data-driven precision.
@@ -66,7 +66,7 @@ export default function Features() {
             </Link>
           </div>
         </div>
-      </div>
+      </ScrollFadeSection>
     </div>
   );
 }
