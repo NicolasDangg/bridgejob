@@ -1,13 +1,26 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Globe, ExternalLink, Bookmark, Sparkles, TrendingUp } from 'lucide-react';
+import { MapPin, Globe, ExternalLink, Bookmark, TrendingUp } from 'lucide-react';
 import { Job } from '../../services/jobService';
 
 interface JobCardProps {
   job: Job;
 }
 
+const COMPANY_LOGOS: Record<Job['company'], string> = {
+  Google: 'https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png',
+  Meta: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Meta_Platforms_Inc._logo.svg/200px-Meta_Platforms_Inc._logo.svg.png',
+  TikTok: 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a9/TikTok_logo.svg/200px-TikTok_logo.svg.png',
+  Amazon: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
+};
+
 export default function JobCard({ job }: JobCardProps) {
+  const [logoFailed, setLogoFailed] = React.useState(false);
+  const logoSrc = COMPANY_LOGOS[job.company as keyof typeof COMPANY_LOGOS] ?? job.logo;
+
+  React.useEffect(() => {
+    setLogoFailed(false);
+  }, [job.id]);
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -25,8 +38,13 @@ export default function JobCard({ job }: JobCardProps) {
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-lg border border-gray-100 bg-white flex items-center justify-center p-2 shadow-inner overflow-hidden">
-              {job.logo ? (
-                <img src={job.logo} alt={job.company} className="w-full h-full object-contain" />
+              {logoSrc && !logoFailed ? (
+                <img
+                  src={logoSrc}
+                  alt={`${job.company} logo`}
+                  className="w-full h-full object-contain"
+                  onError={() => setLogoFailed(true)}
+                />
               ) : (
                 <Globe className="text-gray-300" size={20} />
               )}
