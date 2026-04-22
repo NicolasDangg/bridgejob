@@ -8,6 +8,7 @@ export interface Job {
   url: string;
   logo?: string;
   postedAt: string;
+  keywords?: string[];
   source: 'Google' | 'Meta' | 'TikTok' | 'Other';
 }
 
@@ -22,7 +23,8 @@ const MOCK_JOBS: Job[] = [
     url: 'https://careers.google.com',
     logo: 'https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png',
     postedAt: '2 days ago',
-    source: 'Google'
+    source: 'Google',
+    keywords: ['tech', 'frontend', 'react', 'typescript', 'web']
   },
   {
     id: 'job-2',
@@ -34,7 +36,8 @@ const MOCK_JOBS: Job[] = [
     url: 'https://metacareers.com',
     logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Meta_Platforms_Inc._logo.svg/200px-Meta_Platforms_Inc._logo.svg.png',
     postedAt: '1 week ago',
-    source: 'Meta'
+    source: 'Meta',
+    keywords: ['tech', 'full stack', 'node.js', 'frontend', 'metaverse']
   },
   {
     id: 'job-3',
@@ -46,7 +49,8 @@ const MOCK_JOBS: Job[] = [
     url: 'https://careers.tiktok.com',
     logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a9/TikTok_logo.svg/200px-TikTok_logo.svg.png',
     postedAt: '3 days ago',
-    source: 'TikTok'
+    source: 'TikTok',
+    keywords: ['tech', 'backend', 'go', 'java', 'systems']
   },
   {
     id: 'job-4',
@@ -57,7 +61,8 @@ const MOCK_JOBS: Job[] = [
     description: 'AWS is seeking talented software engineers to build the next generation of cloud computing services.',
     url: 'https://amazon.jobs',
     postedAt: '5 days ago',
-    source: 'Other'
+    source: 'Other',
+    keywords: ['tech', 'cloud', 'aws', 'distributed systems']
   }
 ];
 
@@ -67,12 +72,22 @@ export async function searchJobs(query: string, company?: string): Promise<Job[]
   
   let filtered = [...MOCK_JOBS];
   
-  if (query) {
-    const q = query.toLowerCase();
-    filtered = filtered.filter(j => 
-      j.title.toLowerCase().includes(q) || 
-      j.description.toLowerCase().includes(q)
-    );
+  const normalizedQuery = query.trim().toLowerCase();
+  
+  if (normalizedQuery) {
+    const terms = normalizedQuery.split(/\s+/).filter(Boolean);
+    filtered = filtered.filter(job => {
+      const searchableText = [
+        job.title,
+        job.company,
+        job.location,
+        job.description,
+        job.source,
+        ...(job.keywords ?? []),
+      ].join(' ').toLowerCase();
+
+      return terms.every((term) => searchableText.includes(term));
+    });
   }
   
   if (company && company !== 'All') {
