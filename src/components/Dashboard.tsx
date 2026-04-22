@@ -890,6 +890,8 @@ export default function Dashboard() {
               )}
             </div>
           )}
+        </div>
+
         {/* Right Column */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
           {/* Run Another Analysis Button */}
