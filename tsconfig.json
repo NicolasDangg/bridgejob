@@ -32,6 +32,6 @@
     "src/app/**",
     "dist",
     "node_modules",
-    "bridgejob (1)"
+    "gapless"
   ]
 }

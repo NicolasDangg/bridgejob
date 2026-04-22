@@ -71,9 +71,9 @@ export default function Contact() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
           {[
-            { label: 'Technical Support', value: 'support@bridgejob.io' },
-            { label: 'Enterprise Sales', value: 'sales@bridgejob.io' },
-            { label: 'Press Inquiries', value: 'media@bridgejob.io' },
+            { label: 'Technical Support', value: 'support@gapless.io' },
+            { label: 'Enterprise Sales', value: 'sales@gapless.io' },
+            { label: 'Press Inquiries', value: 'media@gapless.io' },
           ].map((item) => (
             <div key={item.label} className="text-center space-y-1">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.label}</p>

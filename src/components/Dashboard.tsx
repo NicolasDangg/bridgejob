@@ -91,7 +91,7 @@ function PriorityBadge({ priority }: { priority: string }) {
   }[normalizedPriority] || 'text-slate-600 bg-slate-50 border-slate-100';
 
   return (
-    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${styles}`}>
+    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${styles}`}>
       {normalizedPriority}
     </span>
   );
@@ -164,10 +164,23 @@ export default function Dashboard() {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'priority', direction: 'asc' });
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [usageStats, setUsageStats] = useState<UsageStats>({ totalRuns: 0, lastRunAt: null, lastJobTitle: null });
-  const [expandedGaps, setExpandedGaps] = useState<Set<string>>(new Set());
+  const [expandedOverviewGaps, setExpandedOverviewGaps] = useState<Set<string>>(new Set());
+  const [expandedReadinessGaps, setExpandedReadinessGaps] = useState<Set<string>>(new Set());
 
-  const toggleGap = (skill: string) => {
-    setExpandedGaps((prev) => {
+  const toggleOverviewGap = (skill: string) => {
+    setExpandedOverviewGaps((prev) => {
+      const next = new Set(prev);
+      if (next.has(skill)) {
+        next.delete(skill);
+      } else {
+        next.add(skill);
+      }
+      return next;
+    });
+  };
+
+  const toggleReadinessGap = (skill: string) => {
+    setExpandedReadinessGaps((prev) => {
       const next = new Set(prev);
       if (next.has(skill)) {
         next.delete(skill);
@@ -181,8 +194,8 @@ export default function Dashboard() {
   const storageKey = useMemo(() => {
     const suffix = user?.email || 'guest';
     return {
-      history: `bridgejob.analysis.history.${suffix}`,
-      stats: `bridgejob.analysis.stats.${suffix}`,
+      history: `gapless.analysis.history.${suffix}`,
+      stats: `gapless.analysis.stats.${suffix}`,
     };
   }, [user?.email]);
 
@@ -239,6 +252,8 @@ export default function Dashboard() {
     setJdText(entry.jobDescription);
     setCandidateText(entry.candidateProfile);
     setError(null);
+    setExpandedOverviewGaps(new Set());
+    setExpandedReadinessGaps(new Set(entry.response.partial_matches.map(m => m.skill)));
     setActiveTab('Overview');
   };
 
@@ -247,7 +262,8 @@ export default function Dashboard() {
     setJdText('');
     setCandidateText('');
     setError(null);
-    setExpandedGaps(new Set());
+    setExpandedOverviewGaps(new Set());
+    setExpandedReadinessGaps(new Set());
   };
 
   const runAnalysis = async () => {
@@ -266,7 +282,8 @@ export default function Dashboard() {
 
       if (result.success) {
         setResponse(result.data);
-        setExpandedGaps(new Set());
+        setExpandedOverviewGaps(new Set());
+        setExpandedReadinessGaps(new Set(result.data.partial_matches.map((m: any) => m.skill)));
 
         const savedRun: HistoryEntry = {
           id: `run-${Date.now()}`,
@@ -440,7 +457,7 @@ export default function Dashboard() {
                     {sortedResults.slice(0, 10).map((item, idx) => (
                       <div key={idx} className="flex flex-col border-b border-gray-50 last:border-0">
                         <button
-                          onClick={() => item.status === 'GAP' && toggleGap(item.skill)}
+                          onClick={() => item.status === 'GAP' && toggleOverviewGap(item.skill)}
                           disabled={item.status !== 'GAP'}
                           className={cn(
                             "flex items-center gap-3 p-2 w-full text-left transition-colors rounded-md group",
@@ -464,14 +481,14 @@ export default function Dashboard() {
                                 size={14} 
                                 className={cn(
                                   "text-gray-300 transition-transform group-hover:text-red-400",
-                                  expandedGaps.has(item.skill) && "rotate-90 text-red-500"
+                                  expandedOverviewGaps.has(item.skill) && "rotate-90 text-red-500"
                                 )} 
                               />
                             )}
                           </div>
                         </button>
                         <AnimatePresence>
-                          {expandedGaps.has(item.skill) && (
+                          {expandedOverviewGaps.has(item.skill) && (
                             <motion.div
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: 'auto', opacity: 1 }}
@@ -606,14 +623,13 @@ export default function Dashboard() {
                           <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Skill</th>
                           <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
                           <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Priority</th>
-                          <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
                         {sortedResults.map((item, idx) => (
                           <React.Fragment key={idx}>
                             <tr
-                              onClick={() => item.status === 'GAP' && toggleGap(item.skill)}
+                              onClick={() => item.status === 'GAP' && toggleReadinessGap(item.skill)}
                               className={cn(
                                 "hover:bg-gray-50 transition-colors group",
                                 item.status === 'GAP' && "cursor-pointer"
@@ -626,7 +642,7 @@ export default function Dashboard() {
                                       size={12}
                                       className={cn(
                                         "text-gray-300 transition-transform group-hover:text-red-400",
-                                        expandedGaps.has(item.skill) && "rotate-90 text-red-500"
+                                        expandedReadinessGaps.has(item.skill) && "rotate-90 text-red-500"
                                       )}
                                     />
                                   )}
@@ -647,14 +663,11 @@ export default function Dashboard() {
                               <td className="px-4 py-3">
                                 <PriorityBadge priority={(item as any).priority} />
                               </td>
-                              <td className="px-4 py-3 text-xs text-gray-500 truncate max-w-[200px]">
-                                {item.action || '—'}
-                              </td>
                             </tr>
                             <AnimatePresence>
-                              {expandedGaps.has(item.skill) && (
+                              {expandedReadinessGaps.has(item.skill) && (
                                 <tr className="border-none">
-                                  <td colSpan={4} className="px-4 py-0 border-none">
+                                  <td colSpan={3} className="px-4 py-0 border-none">
                                     <motion.div
                                       initial={{ height: 0, opacity: 0 }}
                                       animate={{ height: 'auto', opacity: 1 }}

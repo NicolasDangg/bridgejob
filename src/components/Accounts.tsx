@@ -6,12 +6,13 @@ import {
   CreditCard,
   ChevronRight,
   Lock,
-  FileText
+  FileText,
+  LogOut
 } from "lucide-react";
 import DashboardLayout from "./DashboardLayout";
 
 export default function Accounts() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
   if (!user) {
     return (
@@ -134,6 +135,17 @@ export default function Accounts() {
             {/* Decorative element */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
           </div>
+        </div>
+
+        {/* Sign Out Action */}
+        <div className="pt-10 border-t border-gray-100 flex justify-center">
+          <button
+            onClick={() => signOut()}
+            className="group flex items-center gap-3 px-6 py-3 rounded-md text-red-600 hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
+          >
+            <LogOut className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+            <span className="text-xs font-bold uppercase tracking-widest">Sign Out from Session</span>
+          </button>
         </div>
       </div>
     </DashboardLayout>

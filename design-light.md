@@ -1,7 +1,7 @@
-# BridgeJob Design Direction: Light Professional SaaS
+# gapless Design Direction: Light Professional SaaS
 
 ## Product vision
-BridgeJob should feel like a premium career intelligence workspace: fast to scan, information-rich, and built for daily analysis work. The interface should support reading job descriptions, comparing skills, and reviewing fit signals without visual noise.
+gapless should feel like a premium career intelligence workspace: fast to scan, information-rich, and built for daily analysis work. The interface should support reading job descriptions, comparing skills, and reviewing fit signals without visual noise.
 
 The direction is a light-theme, high-density SaaS system: white and off-white surfaces, disciplined spacing, compact components, and restrained accents. It should feel modern, trustworthy, and operational rather than flashy or decorative.
 
@@ -63,4 +63,4 @@ The direction is a light-theme, high-density SaaS system: white and off-white su
 - Playful UI patterns that make the product feel consumer-first instead of operational.
 
 ## Overall tone
-BridgeJob should read like a polished internal SaaS tool for serious career analysis: direct, calm, and efficient. The light theme should feel crisp and premium, and the typography should stay plain, modern, and highly legible.
+gapless should read like a polished internal SaaS tool for serious career analysis: direct, calm, and efficient. The light theme should feel crisp and premium, and the typography should stay plain, modern, and highly legible.

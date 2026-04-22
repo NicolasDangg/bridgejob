@@ -14,12 +14,12 @@ const FEATURES = [
         <div className="space-y-2">
           <h3 className="text-xl font-bold tracking-tight text-slate-900">1.2M+ Real-world signals</h3>
           <p className="text-sm text-slate-600 leading-relaxed">
-            BridgeJob is trained on a proprietary dataset of 1.2M+ live job descriptions and verified candidate outcomes from 2024-2026. This ensure your analysis reflects current standards, not outdated trends.
+            <span className="font-bold text-slate-900">gapless</span> is trained on a proprietary dataset of 1.2M+ live job descriptions and verified candidate outcomes from 2024-2026. This ensure your analysis reflects current standards, not outdated trends.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-4 pt-2">
           <div className="enterprise-card p-4 bg-slate-50 border-none">
-            <div className="text-xl font-bold text-slate-900">99.8%</div>
+            <div className="text-xl font-bold text-slate-900">95.8%</div>
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Accuracy Rate</div>
           </div>
           <div className="enterprise-card p-4 bg-slate-50 border-none">
@@ -121,8 +121,8 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
+  visible: {
+    opacity: 1,
     y: 0,
     transition: { duration: 0.6 }
   },
@@ -131,7 +131,7 @@ const itemVariants = {
 export const FeaturesShowcase = () => {
   const [activeTab, setActiveTab] = useState(0);
   const containerRef = useRef(null);
-  
+
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ["start end", "end start"]
@@ -142,14 +142,14 @@ export const FeaturesShowcase = () => {
 
   return (
     <section ref={containerRef} className="relative bg-surface-white border-t border-border-subtle overflow-hidden">
-      <motion.div 
+      <motion.div
         style={{ y: yBackground, rotate: rotateBackground }}
         className="absolute top-1/4 right-[5%] w-64 h-64 bg-slate-50 rounded-full blur-3xl -z-10"
       />
-      
+
       <Marquee />
 
-      <motion.div 
+      <motion.div
         variants={containerVariants}
         initial="hidden"
         whileInView="visible"
@@ -164,7 +164,7 @@ export const FeaturesShowcase = () => {
           <motion.h2 variants={itemVariants} className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em] pt-4">Suitable for modern recruitment cycles</motion.h2>
         </div>
 
-        <motion.div 
+        <motion.div
           variants={itemVariants}
           className="flex flex-col md:flex-row items-stretch justify-center max-w-6xl mx-auto border border-border-subtle rounded-md overflow-hidden shadow-2xl shadow-slate-100 bg-white"
         >
@@ -223,7 +223,7 @@ export const FeaturesShowcase = () => {
 
                 <div className="pt-10 border-t border-border-subtle flex items-center justify-between">
                   <button className="flex items-center gap-2 text-[10px] font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-colors group">
-                    View technical documentation 
+                    View technical documentation
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </button>
                   <div className="flex gap-1.5">

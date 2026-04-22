@@ -109,9 +109,13 @@ function PageLayout({ children }: { children: ReactNode }) {
         >
           <div className="container mx-auto max-w-7xl px-4 flex items-center justify-between">
             <div className="flex items-center gap-8">
-              <Link to="/" className="font-bold text-lg tracking-tight text-slate-900 flex items-center gap-2">
-                <div className="w-6 h-6 bg-slate-900 rounded-md flex items-center justify-center text-white text-[10px]">BJ</div>
-                BridgeJob
+              <Link to="/" className="font-bold text-lg tracking-tight text-slate-900 flex items-center gap-2.5">
+                <img
+                  src="https://jxpnnzaddesjmkcl.public.blob.vercel-storage.com/Generated%20Image%20April%2022%2C%202026%20-%208_25AM.svg"
+                  alt="gapless logo"
+                  className="w-10 h-10 object-contain"
+                />
+                <span className="text-xl tracking-tighter">gapless</span>
               </Link>
               <nav className="hidden md:flex items-center gap-1">
                 <NavLink to="/dashboard" icon={LayoutDashboard}>Dashboard</NavLink>
@@ -164,7 +168,7 @@ function PageLayout({ children }: { children: ReactNode }) {
       {!isDashboardView && (
         <footer className="bg-white border-t border-border-subtle py-8">
           <div className="container mx-auto max-w-7xl px-4 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-xs text-slate-500">© 2026 BridgeJob Career Intelligence. All rights reserved.</p>
+            <p className="text-xs text-slate-500">© 2026 gapless Career Intelligence. All rights reserved.</p>
             <div className="flex gap-6 text-xs text-slate-400">
               <Link to="/privacy" className="hover:text-slate-600 transition-colors">Privacy Policy</Link>
               <Link to="/terms" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
@@ -215,11 +219,11 @@ function Hero() {
         </motion.div>
 
         <motion.h1 variants={itemVariants} className="text-5xl font-bold tracking-tight text-slate-900 sm:text-7xl lg:text-8xl">
-          <span style={{ backgroundColor: '#FFE066', padding: '0 8px', borderRadius: 2 }}>Close the gap</span> <br className="hidden md:block" /> between you and <br className="hidden md:block" /> your dream job.
+          <span className="relative isolate inline-block px-4 py-1 mx-1"><span className="absolute inset-0 bg-amber-200/60 -rotate-1 rounded-sm -z-10"></span>Close the gap</span> <br className="hidden md:block" /> between you and <br className="hidden md:block" /> your dream job.
         </motion.h1>
 
         <motion.p variants={itemVariants} className="text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto">
-          BridgeJob analyzes job descriptions against your experience to provide ranked readiness scores and actionable roadmaps. Trained by real-world data.
+          <span className="font-bold text-slate-900">gapless</span> analyzes job descriptions against your experience to provide ranked readiness scores and actionable roadmaps. Trained by real-world data.
         </motion.p>
 
         <motion.div variants={itemVariants} className="flex flex-col items-center gap-6 pt-4">
@@ -264,6 +268,63 @@ function Hero() {
   );
 }
 
+function LiveDemo() {
+  const scrollToSample = () => {
+    const element = document.getElementById('sample-result');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <section className="py-24 px-4 bg-slate-50 border-y border-border-subtle">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        className="max-w-5xl mx-auto space-y-12"
+      >
+        <div className="text-center space-y-4">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">Live Demo</p>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">Watch the intelligence in action.</h2>
+          <p className="text-sm text-slate-600 max-w-xl mx-auto font-medium">
+            See how <span className="font-bold text-slate-900">gapless</span> processes complex requirements and candidate data to generate a strategic career roadmap in seconds.
+          </p>
+        </div>
+
+        <div className="relative group">
+          {/* Decorative frame */}
+          <div className="absolute -inset-1 bg-gradient-to-tr from-slate-200 to-indigo-100 rounded-xl opacity-50 blur-sm group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+
+          <div className="relative bg-white p-2 rounded-xl border border-border-subtle shadow-2xl overflow-hidden">
+            <video
+              className="w-full h-auto rounded-lg"
+              autoPlay
+              muted
+              loop
+              playsInline
+              poster="/Users/nicolasdangg/.gemini/antigravity/brain/d0f20765-86c5-4e01-afd7-eedd0a1161e6/gapless_poster_frame_1776826860827.png"
+            >
+              <source src="https://jxpnnzaddesjmkcl.public.blob.vercel-storage.com/output2.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </div>
+
+        <div className="flex justify-center pt-8">
+          <button
+            onClick={scrollToSample}
+            className="enterprise-button h-11 px-8 flex items-center justify-center text-sm shadow-lg shadow-slate-200 gap-2"
+          >
+            <span>View a sample result</span>
+            <ChevronDown className="w-4 h-4" />
+          </button>
+        </div>
+      </motion.div>
+    </section>
+  );
+}
+
 function LandingPage() {
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
@@ -279,6 +340,7 @@ function LandingPage() {
         style={{ scaleX }}
       />
       <Hero />
+      <LiveDemo />
       <FeaturesShowcase />
       <div id="sample-result" />
       <SampleResult />

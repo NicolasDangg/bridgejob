@@ -141,8 +141,12 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
       )}>
         <div className={cn("p-6 flex-1 overflow-hidden", isCollapsed && "px-4")}>
           <Link to="/" className="flex items-center gap-2 mb-8 overflow-hidden hover:opacity-80 transition-opacity">
-            <div className="w-8 h-8 bg-slate-900 rounded-md flex items-center justify-center text-white text-xs font-bold shrink-0">BJ</div>
-            {!isCollapsed && <span className="font-bold text-xl tracking-tight truncate">BridgeJob</span>}
+            <img 
+              src="https://jxpnnzaddesjmkcl.public.blob.vercel-storage.com/Generated%20Image%20April%2022%2C%202026%20-%208_25AM.svg" 
+              alt="gapless logo" 
+              className="w-12 h-12 object-contain shrink-0" 
+            />
+            {!isCollapsed && <span className="font-bold text-xl tracking-tight truncate">gapless</span>}
           </Link>
 
           <div className="space-y-6">
@@ -182,7 +186,7 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
           <div className={cn("flex items-center justify-between", isCollapsed ? "flex-col gap-4" : "px-2")}>
             <Link to="/accounts" className="flex items-center gap-3 overflow-hidden hover:opacity-80 transition-opacity">
               <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold border border-white shadow-sm uppercase shrink-0">
-                {user?.email?.substring(0, 2) || 'BJ'}
+                {user?.email?.substring(0, 2) || 'g'}
               </div>
               {!isCollapsed && (
                 <div className="flex flex-col overflow-hidden text-left">

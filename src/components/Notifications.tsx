@@ -59,7 +59,7 @@ export default function Notifications() {
                   <Eye className="w-5 h-5 text-slate-900" />
                   <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">In-App Alerts</h2>
                 </div>
-                <p className="text-xs text-slate-500 font-medium leading-relaxed">Visual banners within the BridgeJob dashboard.</p>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">Visual banners within the gapless dashboard.</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" defaultChecked />
