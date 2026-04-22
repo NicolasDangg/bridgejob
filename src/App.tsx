@@ -54,6 +54,7 @@ const itemVariants = {
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] bg-surface-off-white">
@@ -61,7 +62,34 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (!user) return <div className="text-center p-12">Please log in to access this page.</div>;
+
+  if (!user) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center bg-surface-off-white p-6">
+        <div className="enterprise-card p-12 text-center space-y-6 max-w-sm">
+          <div className="w-12 h-12 bg-slate-50 border border-border-subtle rounded flex items-center justify-center mx-auto text-slate-300">
+            <UserIcon className="w-6 h-6" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-xl font-bold text-slate-900">Authentication Required</h1>
+            <p className="text-xs text-slate-500 leading-relaxed font-medium">Please log in or sign up to access this feature.</p>
+          </div>
+          <div className="flex flex-col gap-3 pt-2">
+            <Link to="/login" className="enterprise-button h-10 px-8 flex items-center justify-center">
+              Log In
+            </Link>
+            <Link to="/signup" className="enterprise-button-outline h-10 px-8 flex items-center justify-center">
+              Sign Up
+            </Link>
+            <Link to="/" className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors">
+              ← Back to Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return <>{children}</>;
 }
 
@@ -285,9 +313,9 @@ function LiveDemo() {
       >
         <div className="text-center space-y-4">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">Live Demo</p>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">Watch the intelligence in action.</h2>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">Watch <span className="font-bold text-slate-900">gapless</span> in action.</h2>
           <p className="text-sm text-slate-600 max-w-xl mx-auto font-medium">
-            See how <span className="font-bold text-slate-900">gapless</span> processes complex requirements and candidate data to generate a strategic career roadmap in seconds.
+            See how we processes complex requirements and candidate data to generate a strategic career roadmap in seconds.
           </p>
         </div>
 
@@ -304,7 +332,7 @@ function LiveDemo() {
               playsInline
               poster="/Users/nicolasdangg/.gemini/antigravity/brain/d0f20765-86c5-4e01-afd7-eedd0a1161e6/gapless_poster_frame_1776826860827.png"
             >
-              <source src="https://jxpnnzaddesjmkcl.public.blob.vercel-storage.com/output2.mp4" type="video/mp4" />
+              <source src="https://jxpnnzaddesjmkcl.public.blob.vercel-storage.com/output3.mp4" type="video/mp4" />
               Your browser does not support the video tag.
             </video>
           </div>

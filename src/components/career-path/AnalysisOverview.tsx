@@ -60,7 +60,7 @@ export default function AnalysisOverview({ analysis }: AnalysisOverviewProps) {
                 transition={{ duration: 1.5, ease: "easeOut" }}
                 className="text-blue-600"
                 strokeWidth="3"
-                strokeDashcap="round"
+                strokeLinecap="round"
                 stroke="currentColor"
                 fill="transparent"
                 d="M18 2.0845

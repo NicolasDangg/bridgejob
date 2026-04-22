@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../lib/AuthContext';
+import { supabase } from '../lib/supabase';
 
 // --- Shared Types (to match Dashboard.tsx) ---
 
@@ -91,62 +92,101 @@ function mapFitResponseToAnalysis(id: string, date: string, response: FitRespons
 // --- Hooks ---
 
 export function useLatestAnalysis() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [data, setData] = useState<Analysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const storageKey = useMemo(() => {
-    const suffix = user?.email || 'guest';
-    return `gapless.analysis.history.${suffix}`;
-  }, [user?.email]);
-
   useEffect(() => {
-    try {
-      const storedHistory = localStorage.getItem(storageKey);
-      if (storedHistory) {
-        const history: HistoryEntry[] = JSON.parse(storedHistory);
-        if (history.length > 0) {
-          const latest = history[0];
-          setData(mapFitResponseToAnalysis(latest.id, latest.createdAt, latest.response));
+    const loadLatest = async () => {
+      try {
+        if (!user?.id) {
+          setLoading(false);
+          return;
         }
+
+        if (!supabase) {
+          setLoading(false);
+          return;
+        }
+
+        const { data: rows, error: err } = await supabase
+          .from('analysis_history')
+          .select('id, analysisresult, created_at')
+          .eq('userid', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (err) throw err;
+
+        if (rows && rows.length > 0) {
+          const row = rows[0];
+          let analysisResult = row.analysisresult;
+          if (typeof analysisResult === 'string') {
+            analysisResult = JSON.parse(analysisResult);
+          }
+          setData(mapFitResponseToAnalysis(row.id, row.created_at, analysisResult));
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to load analysis'));
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to load analysis'));
-      setLoading(false);
-    }
-  }, [storageKey]);
+    };
+
+    loadLatest();
+  }, [user?.id]);
 
   return { data, loading, error };
 }
 
 export function useAnalysisHistory() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [data, setData] = useState<Analysis[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const storageKey = useMemo(() => {
-    const suffix = user?.email || 'guest';
-    return `gapless.analysis.history.${suffix}`;
-  }, [user?.email]);
-
   useEffect(() => {
-    try {
-      const storedHistory = localStorage.getItem(storageKey);
-      if (storedHistory) {
-        const history: HistoryEntry[] = JSON.parse(storedHistory);
-        setData(history.map(h => mapFitResponseToAnalysis(h.id, h.createdAt, h.response)));
-      } else {
-        setData([]);
+    const loadHistory = async () => {
+      try {
+        if (!user?.id) {
+          setLoading(false);
+          return;
+        }
+
+        if (!supabase) {
+          setLoading(false);
+          return;
+        }
+
+        const { data: rows, error: err } = await supabase
+          .from('analysis_history')
+          .select('id, analysisresult, created_at')
+          .eq('userid', user.id)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (err) throw err;
+
+        if (rows) {
+          const analyses = rows.map(row => {
+            let analysisResult = row.analysisresult;
+            if (typeof analysisResult === 'string') {
+              analysisResult = JSON.parse(analysisResult);
+            }
+            return mapFitResponseToAnalysis(row.id, row.created_at, analysisResult);
+          });
+          setData(analyses);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to load history'));
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to load history'));
-      setLoading(false);
-    }
-  }, [storageKey]);
+    };
+
+    loadHistory();
+  }, [user?.id]);
 
   return { data, loading, error };
 }

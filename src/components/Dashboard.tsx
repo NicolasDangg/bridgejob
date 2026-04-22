@@ -81,6 +81,8 @@ interface UsageStats {
 }
 
 const GUEST_HISTORY_KEY = 'gapless.analysis.history.guest';
+const ANALYSIS_HISTORY_TABLE = 'analysis_history';
+const DEFAULT_HISTORY_SUMMARY = 'No summary available.';
 
 type StoredHistoryJobData = {
   jobTitle?: string;
@@ -92,9 +94,14 @@ type StoredHistoryJobData = {
 type AnalysisHistoryRow = {
   id?: string;
   userid?: string;
+  user_id?: string;
   jobdata?: StoredHistoryJobData | string | null;
+  job_data?: StoredHistoryJobData | string | null;
   analysisresult?: FitResponse | string | null;
+  analysis_result?: FitResponse | string | null;
+  stored_json?: string | Record<string, unknown> | null;
   created_at?: string;
+  createdAt?: string;
 };
 
 function readGuestHistory(): HistoryEntry[] {
@@ -103,7 +110,8 @@ function readGuestHistory(): HistoryEntry[] {
     if (!stored) return [];
 
     const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? (parsed as HistoryEntry[]) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((entry) => mapHistoryRow(entry as AnalysisHistoryRow));
   } catch {
     return [];
   }
@@ -128,47 +136,132 @@ function parseMaybeJsonObject(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 }
 
-function readJobDataField(jobData: AnalysisHistoryRow['jobdata'], field: 'jobDescription' | 'candidateProfile'): string {
-  const parsedJobData = parseMaybeJsonObject(jobData);
-  const fallbackKey = field === 'jobDescription' ? 'job_description' : 'candidate_profile';
-  const nestedJobData = parsedJobData.jobdata && typeof parsedJobData.jobdata === 'object'
-    ? (parsedJobData.jobdata as Record<string, unknown>)
-    : null;
-
-  const candidates = [
-    parsedJobData[field],
-    parsedJobData[fallbackKey],
-    nestedJobData?.[field],
-    nestedJobData?.[fallbackKey],
-  ];
-
-  const firstString = candidates.find((value): value is string => typeof value === "string");
-  return firstString ?? '';
+function readFirstString(values: unknown[]): string {
+  const firstString = values.find((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  return firstString?.trim() ?? '';
 }
 
-function normalizeFitResponse(value: unknown): FitResponse {
-  const response = parseMaybeJsonObject(value) as Partial<FitResponse>;
+function readOptionalString(value: unknown): string | undefined {
+  const parsed = readFirstString([value]);
+  return parsed || undefined;
+}
+
+function normalizeReadinessScore(value: unknown): number {
+  const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Math.min(100, parsed));
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+}
+
+function normalizeMatchItem(value: unknown): MatchItem {
+  const parsed = parseMaybeJsonObject(value);
+  const priority = parsed.priority;
+  const learnability = parsed.learnability;
 
   return {
-    job_title: response.job_title ?? 'Untitled analysis',
-    overall_fit: response.overall_fit ?? 'MODERATE',
-    overall_summary: response.overall_summary ?? '',
-    strong_matches: Array.isArray(response.strong_matches) ? response.strong_matches : [],
-    partial_matches: Array.isArray(response.partial_matches) ? response.partial_matches : [],
-    noise_skills: Array.isArray(response.noise_skills) ? response.noise_skills : [],
-    readiness_score: typeof response.readiness_score === 'number' ? response.readiness_score : 0,
-    bridge_steps: Array.isArray(response.bridge_steps) ? response.bridge_steps : [],
-    analyst_note: response.analyst_note ?? '',
+    skill: readFirstString([parsed.skill]) || 'Unspecified skill',
+    note: readOptionalString(parsed.note),
+    gap_detail: readOptionalString(parsed.gap_detail),
+    priority: priority === 'CRITICAL' || priority === 'IMPORTANT' || priority === 'NICE TO HAVE' ? priority : undefined,
+    learnability: learnability === 'FAST' || learnability === 'MEDIUM' || learnability === 'SLOW' ? learnability : undefined,
+    action: readOptionalString(parsed.action),
+  };
+}
+
+function normalizeMatchArray(value: unknown): MatchItem[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => normalizeMatchItem(item));
+}
+
+function readJobDataField(jobData: unknown, field: 'jobDescription' | 'candidateProfile'): string {
+  const parsedJobData = parseMaybeJsonObject(jobData);
+  const fallbackKey = field === 'jobDescription' ? 'job_description' : 'candidate_profile';
+  const nestedCandidates = [parsedJobData.jobdata, parsedJobData.job_data, parsedJobData.jobData]
+    .filter((value): value is Record<string, unknown> => Boolean(value) && typeof value === 'object');
+
+  return readFirstString([
+    parsedJobData[field],
+    parsedJobData[fallbackKey],
+    ...nestedCandidates.map((nested) => nested[field]),
+    ...nestedCandidates.map((nested) => nested[fallbackKey]),
+  ]);
+}
+
+function deriveOverallFitFromReadiness(readinessScore: number): FitResponse['overall_fit'] {
+  if (readinessScore >= 90) return 'EXCELLENCE';
+  if (readinessScore >= 75) return 'STRONG';
+  if (readinessScore >= 50) return 'MODERATE';
+  if (readinessScore >= 25) return 'WEAK';
+  return 'SEVERELY UNDERQUALIFIED';
+}
+
+function normalizeOverallFit(value: unknown, readinessScore: number): FitResponse['overall_fit'] {
+  const normalizedFromValue = value === 'EXCELLENCE' ||
+    value === 'STRONG' ||
+    value === 'MODERATE' ||
+    value === 'WEAK' ||
+    value === 'SEVERELY UNDERQUALIFIED'
+    ? value
+    : undefined;
+
+  const derivedFromReadiness = deriveOverallFitFromReadiness(readinessScore);
+
+  if (!normalizedFromValue) return derivedFromReadiness;
+
+  // Keep tag aligned with readiness so 100% cannot show "MODERATE".
+  return derivedFromReadiness;
+}
+
+function normalizeFitResponse(value: unknown, jobData?: unknown): FitResponse {
+  const response = parseMaybeJsonObject(value) as Partial<FitResponse>;
+  const parsedJobData = parseMaybeJsonObject(jobData);
+  const normalizedReadinessScore = normalizeReadinessScore(response.readiness_score);
+  const fallbackJobTitle = readFirstString([
+    parsedJobData.jobTitle,
+    parsedJobData.job_title,
+    parsedJobData.jobDescription,
+    parsedJobData.job_description,
+  ]);
+
+  return {
+    job_title: readFirstString([response.job_title]) || fallbackJobTitle || 'Untitled analysis',
+    overall_fit: normalizeOverallFit(response.overall_fit, normalizedReadinessScore),
+    overall_summary: readFirstString([response.overall_summary]) || DEFAULT_HISTORY_SUMMARY,
+    strong_matches: normalizeMatchArray(response.strong_matches),
+    partial_matches: normalizeMatchArray(response.partial_matches),
+    noise_skills: normalizeStringArray(response.noise_skills),
+    readiness_score: normalizedReadinessScore,
+    bridge_steps: normalizeStringArray(response.bridge_steps),
+    analyst_note: readFirstString([response.analyst_note]),
   };
 }
 
 function mapHistoryRow(row: AnalysisHistoryRow | null | undefined): HistoryEntry {
+  const parsedRow = parseMaybeJsonObject(row);
+  const rawJobData = row?.jobdata ?? row?.job_data ?? parsedRow.jobdata ?? parsedRow.job_data;
+  
+  // Prefer stored_json if available, otherwise fall back to analysisresult
+  let rawAnalysisResult = row?.stored_json ?? row?.analysisresult ?? row?.analysis_result ?? parsedRow.stored_json ?? parsedRow.analysisresult ?? parsedRow.analysis_result ?? parsedRow.response;
+  
+  // If stored_json is a string, parse it
+  if (typeof rawAnalysisResult === 'string') {
+    try {
+      rawAnalysisResult = JSON.parse(rawAnalysisResult);
+    } catch {
+      // If parsing fails, keep as is
+    }
+  }
+
   return {
-    id: row?.id ?? 'run-' + Date.now(),
-    createdAt: row?.created_at ?? new Date().toISOString(),
-    jobDescription: readJobDataField(row?.jobdata, 'jobDescription') ?? '',
-    candidateProfile: readJobDataField(row?.jobdata, 'candidateProfile') ?? '',
-    response: normalizeFitResponse(row?.analysisresult),
+    id: readFirstString([row?.id, parsedRow.id]) || 'run-' + Date.now(),
+    createdAt: readFirstString([row?.created_at, row?.createdAt, parsedRow.created_at, parsedRow.createdAt]) || new Date().toISOString(),
+    jobDescription: readJobDataField(rawJobData, 'jobDescription'),
+    candidateProfile: readJobDataField(rawJobData, 'candidateProfile'),
+    response: normalizeFitResponse(rawAnalysisResult, rawJobData),
   };
 }
 
@@ -253,6 +346,38 @@ const Card = ({ children, className, title, action, subtitle }: any) => (
   </motion.div>
 );
 
+type HistoryCardProps = {
+  entry: HistoryEntry;
+  onLoad: (entry: HistoryEntry) => void;
+};
+
+function HistoryCard({ entry, onLoad }: HistoryCardProps) {
+  const historyTitle = entry.response?.job_title || entry.jobDescription || 'Untitled analysis';
+  const historySummary = entry.response?.overall_summary || DEFAULT_HISTORY_SUMMARY;
+  const historyReadiness = normalizeReadinessScore(entry.response?.readiness_score);
+  const historyMatches = Array.isArray(entry.response?.strong_matches) ? entry.response.strong_matches.length : 0;
+
+  return (
+    <Card
+      subtitle={timeLabel(entry.createdAt ?? null)}
+      title={historyTitle}
+      action={<button onClick={() => onLoad(entry)} className="text-xs font-bold text-blue-500">Load</button>}
+    >
+      <p className="text-sm text-gray-600 line-clamp-2">{historySummary}</p>
+      <div className="flex items-center gap-4 mt-4">
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-blue-500" />
+          <span className="text-[10px] font-bold text-gray-400 uppercase">{historyReadiness}% Readiness</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span className="text-[10px] font-bold text-gray-400 uppercase">{historyMatches} Matches</span>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 // --- Main Component ---
 
 export default function Dashboard() {
@@ -300,8 +425,8 @@ export default function Dashboard() {
 
     if (supabase && user?.id) {
       const { data, error } = await supabase
-        .from('analysis_history')
-        .select('id, userid, jobdata, analysisresult, created_at')
+        .from(ANALYSIS_HISTORY_TABLE)
+        .select('*')
         .eq('userid', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -404,37 +529,41 @@ export default function Dashboard() {
       const result = (await requestDashboardAnalysis(fetch, endpoint, { jd: jdText, skills: candidateText }, fallbackEndpoint)) as AnalyzeApiResponse;
 
       if (result.success) {
-        setResponse(result.data);
-        setExpandedOverviewGaps(new Set());
-        setExpandedReadinessGaps(new Set(result.data.partial_matches.map((m: any) => m.skill)));
+        const normalizedResult = normalizeFitResponse(result.data, {
+          jobTitle: result.data?.job_title,
+          jobDescription: jdText,
+          candidateProfile: candidateText,
+        });
 
-        const savedRun = buildHistoryEntry(result.data, jdText, candidateText);
+        setResponse(normalizedResult);
+        setExpandedOverviewGaps(new Set());
+        setExpandedReadinessGaps(new Set(normalizedResult.partial_matches.map((m) => m.skill)));
+
+        const savedRun = buildHistoryEntry(normalizedResult, jdText, candidateText);
+        setHistory((current) => [savedRun, ...current.filter((item) => item.response.job_title !== normalizedResult.job_title)].slice(0, 10));
 
         if (supabase && user?.id) {
-          const { error: saveError } = await supabase.from('analysis_history').insert({
-            user_id: user.id,
-            job_data: {
-              jobTitle: result.data.job_title,
+          const { error: saveError } = await supabase.from(ANALYSIS_HISTORY_TABLE).insert({
+            userid: user.id,
+            jobdata: {
+              jobTitle: normalizedResult.job_title,
               jobDescription: jdText,
               candidateProfile: candidateText,
             },
-            analysis_result: result.data,
+            analysisresult: normalizedResult,
+            stored_json: JSON.stringify(result.data),
+            created_at: new Date().toISOString(),
           });
 
           if (saveError) {
             setError(saveError.message || 'Failed to save analysis history.');
-          } else {
-            await loadHistory();
           }
-        } else {
-          const nextHistory = [savedRun, ...readGuestHistory().filter((item) => item.response.job_title !== result.data.job_title)].slice(0, 10);
-          setHistory(nextHistory);
         }
 
         setUsageStats((current) => ({
           totalRuns: current.totalRuns + 1,
           lastRunAt: savedRun.createdAt,
-          lastJobTitle: result.data.job_title,
+          lastJobTitle: normalizedResult.job_title,
         }));
       } else {
         setError(result.error.message || 'An error occurred during analysis.');
@@ -854,33 +983,9 @@ export default function Dashboard() {
           {activeTab === 'History' && (
             <div className="space-y-6">
               {history.length > 0 ? (
-                history.map((entry) => {
-                  const historyTitle = entry.response?.job_title ?? entry.jobDescription ?? 'Untitled analysis';
-                  const historySummary = entry.response?.overall_summary ?? 'No summary available.';
-                  const historyReadiness = entry.response?.readiness_score ?? 0;
-                  const historyMatches = entry.response?.strong_matches?.length ?? 0;
-
-                  return (
-                    <Card
-                      key={entry.id}
-                      subtitle={timeLabel(entry.createdAt ?? null)}
-                      title={historyTitle}
-                      action={<button onClick={() => loadHistoryItem(entry)} className="text-xs font-bold text-blue-500">Load</button>}
-                    >
-                      <p className="text-sm text-gray-600 line-clamp-2">{historySummary}</p>
-                      <div className="flex items-center gap-4 mt-4">
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-full bg-blue-500" />
-                          <span className="text-[10px] font-bold text-gray-400 uppercase">{historyReadiness}% Readiness</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                          <span className="text-[10px] font-bold text-gray-400 uppercase">{historyMatches} Matches</span>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })
+                history.map((entry) => (
+                  <HistoryCard key={entry.id} entry={entry} onLoad={loadHistoryItem} />
+                ))
               ) : (
                 <div className="bg-white border border-gray-200 rounded-md p-12 text-center shadow-sm">
                   <History size={48} className="mx-auto text-gray-300 mb-4" />
