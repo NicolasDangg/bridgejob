@@ -83,23 +83,27 @@ interface UsageStats {
 const GUEST_HISTORY_KEY = 'gapless.analysis.history.guest';
 
 type StoredHistoryJobData = {
-  jobTitle: string;
-  jobDescription: string;
-  candidateProfile: string;
+  jobTitle?: string;
+  jobDescription?: string;
+  candidateProfile?: string;
+  [key: string]: unknown;
 };
 
 type AnalysisHistoryRow = {
-  id: string;
-  user_id: string;
-  job_data: StoredHistoryJobData | null;
-  analysis_result: FitResponse;
-  created_at: string;
+  id?: string;
+  userid?: string;
+  jobdata?: StoredHistoryJobData | string | null;
+  analysisresult?: FitResponse | string | null;
+  created_at?: string;
 };
 
 function readGuestHistory(): HistoryEntry[] {
   try {
     const stored = window.localStorage.getItem(GUEST_HISTORY_KEY);
-    return stored ? (JSON.parse(stored) as HistoryEntry[]) : [];
+    if (!stored) return [];
+
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? (parsed as HistoryEntry[]) : [];
   } catch {
     return [];
   }
@@ -109,26 +113,74 @@ function writeGuestHistory(history: HistoryEntry[]) {
   window.localStorage.setItem(GUEST_HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
 }
 
-function mapHistoryRow(row: AnalysisHistoryRow): HistoryEntry {
+function parseMaybeJsonObject(value: unknown): Record<string, unknown> {
+  if (!value) return {};
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function readJobDataField(jobData: AnalysisHistoryRow['jobdata'], field: 'jobDescription' | 'candidateProfile'): string {
+  const parsedJobData = parseMaybeJsonObject(jobData);
+  const fallbackKey = field === 'jobDescription' ? 'job_description' : 'candidate_profile';
+  const nestedJobData = parsedJobData.jobdata && typeof parsedJobData.jobdata === 'object'
+    ? (parsedJobData.jobdata as Record<string, unknown>)
+    : null;
+
+  const candidates = [
+    parsedJobData[field],
+    parsedJobData[fallbackKey],
+    nestedJobData?.[field],
+    nestedJobData?.[fallbackKey],
+  ];
+
+  const firstString = candidates.find((value): value is string => typeof value === "string");
+  return firstString ?? '';
+}
+
+function normalizeFitResponse(value: unknown): FitResponse {
+  const response = parseMaybeJsonObject(value) as Partial<FitResponse>;
+
   return {
-    id: row.id,
-    createdAt: row.created_at,
-    jobDescription: row.job_data?.jobDescription ?? '',
-    candidateProfile: row.job_data?.candidateProfile ?? '',
-    response: row.analysis_result,
+    job_title: response.job_title ?? 'Untitled analysis',
+    overall_fit: response.overall_fit ?? 'MODERATE',
+    overall_summary: response.overall_summary ?? '',
+    strong_matches: Array.isArray(response.strong_matches) ? response.strong_matches : [],
+    partial_matches: Array.isArray(response.partial_matches) ? response.partial_matches : [],
+    noise_skills: Array.isArray(response.noise_skills) ? response.noise_skills : [],
+    readiness_score: typeof response.readiness_score === 'number' ? response.readiness_score : 0,
+    bridge_steps: Array.isArray(response.bridge_steps) ? response.bridge_steps : [],
+    analyst_note: response.analyst_note ?? '',
+  };
+}
+
+function mapHistoryRow(row: AnalysisHistoryRow | null | undefined): HistoryEntry {
+  return {
+    id: row?.id ?? 'run-' + Date.now(),
+    createdAt: row?.created_at ?? new Date().toISOString(),
+    jobDescription: readJobDataField(row?.jobdata, 'jobDescription') ?? '',
+    candidateProfile: readJobDataField(row?.jobdata, 'candidateProfile') ?? '',
+    response: normalizeFitResponse(row?.analysisresult),
   };
 }
 
 function buildHistoryEntry(response: FitResponse, jobDescription: string, candidateProfile: string): HistoryEntry {
   return {
-    id: `run-${Date.now()}`,
+    id: 'run-' + Date.now(),
     createdAt: new Date().toISOString(),
     jobDescription,
     candidateProfile,
     response,
   };
 }
-
 // --- Utils ---
 
 function PriorityBadge({ priority }: { priority: string }) {
@@ -241,7 +293,7 @@ export default function Dashboard() {
     });
   };
 
-  const statsStorageKey = useMemo(() => `gapless.analysis.stats.${user?.email || 'guest'}`, [user?.email]);
+  const statsStorageKey = useMemo(() => 'gapless.analysis.stats.' + (user?.email || 'guest'), [user?.email]);
 
   const loadHistory = useCallback(async () => {
     if (authLoading) return;
@@ -249,8 +301,8 @@ export default function Dashboard() {
     if (supabase && user?.id) {
       const { data, error } = await supabase
         .from('analysis_history')
-        .select('id, user_id, job_data, analysis_result, created_at')
-        .eq('user_id', user.id)
+        .select('id, userid, jobdata, analysisresult, created_at')
+        .eq('userid', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -259,7 +311,7 @@ export default function Dashboard() {
         return;
       }
 
-      setHistory((data ?? []).map((row) => mapHistoryRow(row as AnalysisHistoryRow)));
+      setHistory(Array.isArray(data) ? data.map((row) => mapHistoryRow(row as AnalysisHistoryRow)) : []);
       return;
     }
 
@@ -287,7 +339,6 @@ export default function Dashboard() {
     if (authLoading || (supabase && user?.id)) return;
     writeGuestHistory(history);
   }, [authLoading, supabase, user?.id, history]);
-
   const sortedResults = useMemo(() => {
     if (!response) return [];
 
@@ -803,26 +854,33 @@ export default function Dashboard() {
           {activeTab === 'History' && (
             <div className="space-y-6">
               {history.length > 0 ? (
-                history.map((entry) => (
-                  <Card
-                    key={entry.id}
-                    subtitle={timeLabel(entry.createdAt)}
-                    title={entry.response.job_title}
-                    action={<button onClick={() => loadHistoryItem(entry)} className="text-xs font-bold text-blue-500">Load</button>}
-                  >
-                    <p className="text-sm text-gray-600 line-clamp-2">{entry.response.overall_summary}</p>
-                    <div className="flex items-center gap-4 mt-4">
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-blue-500" />
-                        <span className="text-[10px] font-bold text-gray-400 uppercase">{entry.response.readiness_score}% Readiness</span>
+                history.map((entry) => {
+                  const historyTitle = entry.response?.job_title ?? entry.jobDescription ?? 'Untitled analysis';
+                  const historySummary = entry.response?.overall_summary ?? 'No summary available.';
+                  const historyReadiness = entry.response?.readiness_score ?? 0;
+                  const historyMatches = entry.response?.strong_matches?.length ?? 0;
+
+                  return (
+                    <Card
+                      key={entry.id}
+                      subtitle={timeLabel(entry.createdAt ?? null)}
+                      title={historyTitle}
+                      action={<button onClick={() => loadHistoryItem(entry)} className="text-xs font-bold text-blue-500">Load</button>}
+                    >
+                      <p className="text-sm text-gray-600 line-clamp-2">{historySummary}</p>
+                      <div className="flex items-center gap-4 mt-4">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-full bg-blue-500" />
+                          <span className="text-[10px] font-bold text-gray-400 uppercase">{historyReadiness}% Readiness</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <span className="text-[10px] font-bold text-gray-400 uppercase">{historyMatches} Matches</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                        <span className="text-[10px] font-bold text-gray-400 uppercase">{entry.response.strong_matches.length} Matches</span>
-                      </div>
-                    </div>
-                  </Card>
-                ))
+                    </Card>
+                  );
+                })
               ) : (
                 <div className="bg-white border border-gray-200 rounded-md p-12 text-center shadow-sm">
                   <History size={48} className="mx-auto text-gray-300 mb-4" />
@@ -832,8 +890,6 @@ export default function Dashboard() {
               )}
             </div>
           )}
-        </div>
-
         {/* Right Column */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
           {/* Run Another Analysis Button */}
