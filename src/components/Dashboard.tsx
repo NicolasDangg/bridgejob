@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -31,6 +31,7 @@ import {
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { useAuth } from '../lib/AuthContext';
+import { supabase } from '../lib/supabase';
 import { buildAnalyzeEndpoint, requestDashboardAnalysis } from './dashboardApi';
 import DashboardLayout from './DashboardLayout';
 
@@ -77,6 +78,55 @@ interface UsageStats {
   totalRuns: number;
   lastRunAt: string | null;
   lastJobTitle: string | null;
+}
+
+const GUEST_HISTORY_KEY = 'gapless.analysis.history.guest';
+
+type StoredHistoryJobData = {
+  jobTitle: string;
+  jobDescription: string;
+  candidateProfile: string;
+};
+
+type AnalysisHistoryRow = {
+  id: string;
+  user_id: string;
+  job_data: StoredHistoryJobData | null;
+  analysis_result: FitResponse;
+  created_at: string;
+};
+
+function readGuestHistory(): HistoryEntry[] {
+  try {
+    const stored = window.localStorage.getItem(GUEST_HISTORY_KEY);
+    return stored ? (JSON.parse(stored) as HistoryEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeGuestHistory(history: HistoryEntry[]) {
+  window.localStorage.setItem(GUEST_HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
+}
+
+function mapHistoryRow(row: AnalysisHistoryRow): HistoryEntry {
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    jobDescription: row.job_data?.jobDescription ?? '',
+    candidateProfile: row.job_data?.candidateProfile ?? '',
+    response: row.analysis_result,
+  };
+}
+
+function buildHistoryEntry(response: FitResponse, jobDescription: string, candidateProfile: string): HistoryEntry {
+  return {
+    id: `run-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    jobDescription,
+    candidateProfile,
+    response,
+  };
 }
 
 // --- Utils ---
@@ -154,7 +204,7 @@ const Card = ({ children, className, title, action, subtitle }: any) => (
 // --- Main Component ---
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('Overview');
   const [jdText, setJdText] = useState('');
   const [candidateText, setCandidateText] = useState('');
@@ -191,30 +241,52 @@ export default function Dashboard() {
     });
   };
 
-  const storageKey = useMemo(() => {
-    const suffix = user?.email || 'guest';
-    return {
-      history: `gapless.analysis.history.${suffix}`,
-      stats: `gapless.analysis.stats.${suffix}`,
-    };
-  }, [user?.email]);
+  const statsStorageKey = useMemo(() => `gapless.analysis.stats.${user?.email || 'guest'}`, [user?.email]);
+
+  const loadHistory = useCallback(async () => {
+    if (authLoading) return;
+
+    if (supabase && user?.id) {
+      const { data, error } = await supabase
+        .from('analysis_history')
+        .select('id, user_id, job_data, analysis_result, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        setHistory([]);
+        return;
+      }
+
+      setHistory((data ?? []).map((row) => mapHistoryRow(row as AnalysisHistoryRow)));
+      return;
+    }
+
+    setHistory(readGuestHistory());
+  }, [authLoading, supabase, user?.id]);
+
+  useEffect(() => {
+    void loadHistory();
+  }, [loadHistory]);
 
   useEffect(() => {
     try {
-      const storedHistory = window.localStorage.getItem(storageKey.history);
-      const storedStats = window.localStorage.getItem(storageKey.stats);
-      setHistory(storedHistory ? JSON.parse(storedHistory) : []);
+      const storedStats = window.localStorage.getItem(statsStorageKey);
       setUsageStats(storedStats ? JSON.parse(storedStats) : { totalRuns: 0, lastRunAt: null, lastJobTitle: null });
     } catch {
-      setHistory([]);
       setUsageStats({ totalRuns: 0, lastRunAt: null, lastJobTitle: null });
     }
-  }, [storageKey]);
+  }, [statsStorageKey]);
 
   useEffect(() => {
-    window.localStorage.setItem(storageKey.history, JSON.stringify(history.slice(0, 10)));
-    window.localStorage.setItem(storageKey.stats, JSON.stringify(usageStats));
-  }, [history, usageStats, storageKey]);
+    window.localStorage.setItem(statsStorageKey, JSON.stringify(usageStats));
+  }, [usageStats, statsStorageKey]);
+
+  useEffect(() => {
+    if (authLoading || (supabase && user?.id)) return;
+    writeGuestHistory(history);
+  }, [authLoading, supabase, user?.id, history]);
 
   const sortedResults = useMemo(() => {
     if (!response) return [];
@@ -285,15 +357,29 @@ export default function Dashboard() {
         setExpandedOverviewGaps(new Set());
         setExpandedReadinessGaps(new Set(result.data.partial_matches.map((m: any) => m.skill)));
 
-        const savedRun: HistoryEntry = {
-          id: `run-${Date.now()}`,
-          createdAt: new Date().toISOString(),
-          jobDescription: jdText,
-          candidateProfile: candidateText,
-          response: result.data,
-        };
+        const savedRun = buildHistoryEntry(result.data, jdText, candidateText);
 
-        setHistory((current) => [savedRun, ...current.filter((item) => item.response.job_title !== result.data.job_title)].slice(0, 10));
+        if (supabase && user?.id) {
+          const { error: saveError } = await supabase.from('analysis_history').insert({
+            user_id: user.id,
+            job_data: {
+              jobTitle: result.data.job_title,
+              jobDescription: jdText,
+              candidateProfile: candidateText,
+            },
+            analysis_result: result.data,
+          });
+
+          if (saveError) {
+            setError(saveError.message || 'Failed to save analysis history.');
+          } else {
+            await loadHistory();
+          }
+        } else {
+          const nextHistory = [savedRun, ...readGuestHistory().filter((item) => item.response.job_title !== result.data.job_title)].slice(0, 10);
+          setHistory(nextHistory);
+        }
+
         setUsageStats((current) => ({
           totalRuns: current.totalRuns + 1,
           lastRunAt: savedRun.createdAt,
