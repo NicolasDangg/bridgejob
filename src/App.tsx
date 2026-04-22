@@ -315,7 +315,7 @@ function LiveDemo() {
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">Live Demo</p>
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900">Watch <span className="font-bold text-slate-900">gapless</span> in action.</h2>
           <p className="text-sm text-slate-600 max-w-xl mx-auto font-medium">
-            See how we processes complex requirements and candidate data to generate a strategic career roadmap in seconds.
+            See how we process complex requirements and candidate data to generate a strategic career roadmap in seconds.
           </p>
         </div>
 
