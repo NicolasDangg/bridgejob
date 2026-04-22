@@ -13,7 +13,7 @@ export default function Pricing() {
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pricing & Tiers</p>
           <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">Plans for active career growth.</h1>
           <p className="text-lg text-slate-600 max-w-xl mx-auto">
-            Choose the subscription that matches your analysis volume. Simple, predictable pricing for professionals.
+            Choose the subscription that matches your analysis volume.
           </p>
         </div>
 
@@ -43,7 +43,7 @@ export default function Pricing() {
               name: 'Enterprise',
               price: 'Contact',
               description: 'For agencies and HR teams.',
-              points: ['Team workspaces', 'Resume fitness checker (for HR)', 'Bulk analyze processes', 'Priority support'],
+              points: ['Team workspaces', 'Resume checker (specialized for HR)', 'Bulk processes', 'Priority support'],
               cta: 'Contact Sales',
               featured: false,
               path: '/contact'

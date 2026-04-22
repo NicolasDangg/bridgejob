@@ -3,7 +3,17 @@ import { CreditCard, History, Zap } from "lucide-react";
 import DashboardLayout from "./DashboardLayout";
 
 export default function Billing() {
-  const { user } = useAuth();
+  const { user, userPlan } = useAuth();
+
+  const handleStripePortal = async () => {
+    // --- STRIPE IMPLEMENTATION PLACEHOLDER ---
+    // In production, this would call your backend to create a Stripe Checkout or Portal session
+    // Example: 
+    // const { data } = await supabase.functions.invoke('create-portal-session');
+    // window.location.assign(data.url);
+    console.log("Stripe portal requested");
+    alert("Billing portal integration is coming soon. Please contact support for tier changes.");
+  };
 
   return (
     <DashboardLayout activeLabel="Settings">
@@ -34,9 +44,13 @@ export default function Billing() {
                   <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
                   <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">Current Plan</h2>
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900">Starter Professional</h3>
+                <h3 className="text-2xl font-bold text-slate-900">{userPlan}</h3>
                 <p className="text-xs text-gray-500 font-medium leading-relaxed">
-                  Your plan includes 10 full AI gap analyses per month and basic roadmap tracking.
+                  {userPlan.includes('Free')
+                    ? "Your current free tier includes basic AI analysis and limited roadmap tracking."
+                    : userPlan.includes('Pro')
+                      ? "Your Pro plan includes unlimited AI gap analyses and full strategic roadmap features."
+                      : "Your Enterprise plan includes team-wide oversight and advanced HR reporting tools."}
                 </p>
                 {user && (
                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
@@ -50,8 +64,18 @@ export default function Billing() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button className="w-full py-2 bg-slate-900 text-white rounded-md text-[11px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors">Upgrade to Enterprise</button>
-              <button className="w-full py-2 border border-gray-200 rounded-md text-[11px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-colors">Cancel Subscription</button>
+              <button
+                onClick={handleStripePortal}
+                className="w-full py-2 bg-slate-900 text-white rounded-md text-[11px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors"
+              >
+                {userPlan.includes('Enterprise') ? 'Manage Organization' : 'Upgrade Plan'}
+              </button>
+              <button
+                onClick={handleStripePortal}
+                className="w-full py-2 border border-gray-200 rounded-md text-[11px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-colors"
+              >
+                Manage Billing
+              </button>
             </div>
           </div>
 

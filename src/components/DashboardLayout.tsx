@@ -33,7 +33,6 @@ export const SIDEBAR_NAV = [
   { label: 'Overview', icon: LayoutDashboard },
   { label: 'Readiness', icon: Search },
   { label: 'History', icon: History },
-  { label: 'Roadmaps', icon: Target },
   { label: 'Career Path', icon: TrendingUp },
 ];
 
@@ -112,9 +111,7 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
 
     // External routes
     switch (label) {
-      case 'Roadmaps':
-        navigate('/roadmaps');
-        break;
+
       case 'Career Path':
         navigate('/career-path');
         break;

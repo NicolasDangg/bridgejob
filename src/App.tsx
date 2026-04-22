@@ -15,7 +15,6 @@ import Security from "./components/Security";
 import Billing from "./components/Billing";
 import Notifications from "./components/Notifications";
 import SampleResult from "./components/SampleResult";
-import Roadmaps from "./components/Roadmaps";
 import CareerPath from "./components/CareerPath";
 import JobSearch from "./components/JobSearch";
 import SkillLearning from "./components/SkillLearning";
@@ -94,7 +93,7 @@ function PageLayout({ children }: { children: ReactNode }) {
   const headerBg = useTransform(scrollY, [0, 50], ["rgba(255, 255, 255, 1)", "rgba(255, 255, 255, 0.8)"]);
 
   const dashboardPaths = [
-    '/dashboard', '/roadmaps', '/career-path', '/job-search', '/skill-learning',
+    '/dashboard', '/career-path', '/job-search', '/skill-learning',
     '/resume-review', '/accounts', '/security', '/billing', '/notifications'
   ];
   const isDashboardView = dashboardPaths.includes(pathname);
@@ -364,14 +363,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/roadmaps"
-              element={
-                <ProtectedRoute>
-                  <Roadmaps />
-                </ProtectedRoute>
-              }
-            />
+
             <Route
               path="/career-path"
               element={

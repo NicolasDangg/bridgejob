@@ -12,7 +12,7 @@ import {
 import DashboardLayout from "./DashboardLayout";
 
 export default function Accounts() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, userPlan } = useAuth();
 
   if (!user) {
     return (
@@ -23,7 +23,7 @@ export default function Accounts() {
           </div>
           <div className="space-y-2">
             <h1 className="text-xl font-bold text-slate-900">Access Restricted</h1>
-            <p className="text-xs text-slate-500 leading-relaxed font-medium">Please authenticate to manage your professional profile and account settings.</p>
+            <p className="text-xs text-slate-500 leading-relaxed font-medium">Please authenticate to manage your account settings.</p>
           </div>
           <Link to="/login" className="enterprise-button h-10 px-8 flex items-center justify-center mx-auto">
             Go to Login
@@ -47,7 +47,7 @@ export default function Accounts() {
       title: "Billing & Subscription",
       icon: CreditCard,
       items: [
-        { label: "Current Tier", value: "Starter Plan", sublabel: "Standard individual access", path: "/billing" },
+        { label: "Current Tier", value: userPlan, sublabel: "Standard individual access", path: "/billing" },
         { label: "Payment Method", sublabel: "Manage cards and billing address", path: "/billing" },
         { label: "Invoice Archive", sublabel: "Review past transaction history", path: "/billing" }
       ]
@@ -76,7 +76,7 @@ export default function Accounts() {
         <div className="pb-8 border-b border-gray-100 flex items-end justify-between">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Account Settings</h1>
-            <p className="text-sm text-slate-500 font-medium">Manage your professional credentials and system preferences.</p>
+            <p className="text-sm text-slate-500 font-medium">Manage your credentials and system preferences.</p>
           </div>
           <div className="flex items-center gap-3 bg-white p-2 pr-4 rounded-md border border-gray-200 shadow-sm">
             <div className="w-10 h-10 bg-slate-900 rounded-md flex items-center justify-center text-white text-xs font-bold uppercase tracking-tighter">
@@ -126,7 +126,7 @@ export default function Accounts() {
           {/* Help/Support Section */}
           <div className="bg-slate-900 rounded-md h-full flex flex-col justify-center p-8 space-y-4 shadow-sm relative overflow-hidden">
             <h3 className="text-white text-lg font-bold tracking-tight relative z-10">Need assistance?</h3>
-            <p className="text-slate-400 text-xs leading-relaxed font-medium relative z-10">Our support team is available 24/7 for technical queries and account management help.</p>
+            <p className="text-slate-400 text-xs leading-relaxed font-medium relative z-10">Contact our support team.</p>
             <div className="pt-2 relative z-10">
               <Link to="/contact" className="inline-block h-9 px-6 bg-white text-slate-900 text-[11px] font-bold uppercase tracking-widest rounded-md hover:bg-slate-100 transition-colors leading-9 text-center">
                 Contact Support
