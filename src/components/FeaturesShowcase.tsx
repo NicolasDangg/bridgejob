@@ -14,7 +14,7 @@ const FEATURES = [
         <div className="space-y-2">
           <h3 className="text-xl font-bold tracking-tight text-slate-900">1.2M+ Real-world signals</h3>
           <p className="text-sm text-slate-600 leading-relaxed">
-            <span className="font-bold text-slate-900">gapless</span> is trained on a proprietary dataset of 1.2M+ live job descriptions and verified candidate outcomes from 2024-2026. This ensure your analysis reflects current standards, not outdated trends.
+            <span className="font-bold text-slate-900">gapless</span> is trained on a proprietary dataset of 1.2M+ live job descriptions and verified candidate outcomes from 2024-2026. This ensures your analysis reflects current standards, not outdated trends.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-4 pt-2">
