@@ -1,16 +1,66 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useEffect, useState } from "react";
 import { useAuth } from "../lib/AuthContext";
+import { supabase } from "../lib/supabase";
 import { CreditCard, History, Zap } from "lucide-react";
 import DashboardLayout from "./DashboardLayout";
 
+interface BillingInfo {
+  payment_method_last4: string;
+  payment_method_brand: string;
+}
+
+interface Invoice {
+  id: string;
+  date: string;
+  amount: string;
+  status: string;
+}
+
 export default function Billing() {
   const { user, userPlan } = useAuth();
+  const [billingInfo, setBillingInfo] = useState<BillingInfo | null>(null);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const currentPlanLabel = userPlan;
+
+  useEffect(() => {
+    async function fetchBillingData() {
+      if (!user?.id) return;
+
+      try {
+        // Fetch billing info
+        const { data: infoData } = await supabase
+          .from('billing_info')
+          .select('payment_method_last4, payment_method_brand')
+          .eq('user_id', user.id)
+          .single();
+
+        if (infoData) setBillingInfo(infoData);
+
+        // Fetch invoices
+        const { data: invoicesData } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: false });
+
+        if (invoicesData) setInvoices(invoicesData);
+      } catch (error) {
+        console.error("Error fetching billing data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchBillingData();
+  }, [user?.id]);
 
   const handleStripePortal = async () => {
-    // --- STRIPE IMPLEMENTATION PLACEHOLDER ---
-    // In production, this would call your backend to create a Stripe Checkout or Portal session
-    // Example: 
-    // const { data } = await supabase.functions.invoke('create-portal-session');
-    // window.location.assign(data.url);
     console.log("Stripe portal requested");
     alert("Billing portal integration is coming soon. Please contact support for tier changes.");
   };
@@ -44,11 +94,11 @@ export default function Billing() {
                   <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
                   <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">Current Plan</h2>
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900">{userPlan}</h3>
+                <h3 className="text-2xl font-bold text-slate-900">{currentPlanLabel}</h3>
                 <p className="text-xs text-gray-500 font-medium leading-relaxed">
-                  {userPlan.includes('Free')
+                  {currentPlanLabel.includes('Free')
                     ? "Your current free tier includes basic AI analysis and limited roadmap tracking."
-                    : userPlan.includes('Pro')
+                    : currentPlanLabel.includes('Pro')
                       ? "Your Pro plan includes unlimited AI gap analyses and full strategic roadmap features."
                       : "Your Enterprise plan includes team-wide oversight and advanced HR reporting tools."}
                 </p>
@@ -68,7 +118,7 @@ export default function Billing() {
                 onClick={handleStripePortal}
                 className="w-full py-2 bg-slate-900 text-white rounded-md text-[11px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors"
               >
-                {userPlan.includes('Enterprise') ? 'Manage Organization' : 'Upgrade Plan'}
+                {currentPlanLabel.includes('Enterprise') ? 'Manage Organization' : 'Upgrade Plan'}
               </button>
               <button
                 onClick={handleStripePortal}
@@ -85,14 +135,22 @@ export default function Billing() {
               <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">Payment</h2>
             </div>
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-6 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-[10px] font-bold italic text-slate-400">VISA</div>
-                <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-slate-900">•••• 4242</p>
-                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">Exp 12/28</p>
+              {billingInfo?.payment_method_last4 ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-6 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-[10px] font-bold italic text-slate-400 uppercase">
+                    {billingInfo.payment_method_brand}
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-slate-900">•••• {billingInfo.payment_method_last4}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">Active Method</p>
+                  </div>
                 </div>
-              </div>
-              <button className="w-full h-8 border border-gray-200 rounded-md text-[9px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-colors">Edit Method</button>
+              ) : (
+                <p className="text-xs text-gray-400 italic">No payment method on file.</p>
+              )}
+              <button onClick={handleStripePortal} className="w-full h-8 border border-gray-200 rounded-md text-[9px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-colors">
+                {billingInfo?.payment_method_last4 ? "Edit Method" : "Add Method"}
+              </button>
             </div>
           </div>
 
@@ -103,25 +161,31 @@ export default function Billing() {
             </div>
             <div className="p-2">
               <div className="space-y-1">
-                {[
-                  { id: 'INV-2026-003', date: 'Mar 1, 2026', amount: '$29.00', status: 'Paid' },
-                  { id: 'INV-2026-002', date: 'Feb 1, 2026', amount: '$29.00', status: 'Paid' },
-                  { id: 'INV-2026-001', date: 'Jan 1, 2026', amount: '$29.00', status: 'Paid' }
-                ].map((inv) => (
-                  <div key={inv.id} className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-md transition-colors group">
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-bold text-slate-900">{inv.id}</p>
-                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{inv.date}</p>
+                {invoices.length > 0 ? (
+                  invoices.map((inv) => (
+                    <div key={inv.id} className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-md transition-colors group">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-slate-900">{inv.id}</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">
+                          {new Date(inv.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <p className="text-xs font-bold text-slate-900">{inv.amount}</p>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-widest ${
+                          inv.status === 'Paid' ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-amber-600 bg-amber-50 border-amber-100'
+                        }`}>
+                          {inv.status}
+                        </span>
+                        <button className="text-[9px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">PDF</button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-6">
-                      <p className="text-xs font-bold text-slate-900">{inv.amount}</p>
-                      <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 uppercase tracking-widest">
-                        {inv.status}
-                      </span>
-                      <button className="text-[9px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">PDF</button>
-                    </div>
+                  ))
+                ) : (
+                  <div className="p-8 text-center">
+                    <p className="text-sm text-gray-400 italic">No billing history found.</p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>

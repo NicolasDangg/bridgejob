@@ -197,15 +197,36 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
 
           {!isCollapsed && (
             <div className="flex items-center justify-between gap-1 px-1">
-              <IconButton icon={Plus} className="bg-gray-100 hover:bg-gray-200 flex-1" onClick={() => { navigate('/dashboard'); }} />
-              <IconButton icon={Gift} className="bg-blue-50 text-blue-600 hover:bg-blue-100 flex-1" />
-              <IconButton icon={HelpCircle} className="flex-1" />
-              <IconButton icon={MoreHorizontal} className="flex-1" />
+              <IconButton 
+                icon={Plus} 
+                className="bg-gray-100 hover:bg-gray-200 flex-1" 
+                title="New Analysis"
+                onClick={() => { navigate('/dashboard'); }} 
+              />
+              <IconButton 
+                icon={Gift} 
+                className="bg-blue-50 text-blue-600 hover:bg-blue-100 flex-1" 
+                title="Referrals"
+                onClick={() => alert('Referral program coming soon!')}
+              />
+              <IconButton 
+                icon={HelpCircle} 
+                className="flex-1" 
+                title="Support"
+                onClick={() => navigate('/contact')}
+              />
+              <IconButton 
+                icon={MoreHorizontal} 
+                className="flex-1" 
+                title="Settings"
+                onClick={() => navigate('/accounts')}
+              />
             </div>
           )}
 
           <button
             title="AI Career Coach"
+            onClick={() => alert('AI Career Coach is currently in beta and will be available soon.')}
             className={cn(
               "w-full flex items-center justify-center gap-2 py-3 px-4 rounded-md border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm overflow-hidden",
               isCollapsed && "p-0 h-10"

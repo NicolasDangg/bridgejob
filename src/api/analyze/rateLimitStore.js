@@ -161,16 +161,52 @@ export async function saveAnalysisHistory(
   { userId, jobData, analysisResult },
   supabaseClient = getSupabaseServiceRoleClient(),
 ) {
-  const { error } = await supabaseClient
-    .from(ANALYSIS_HISTORY_TABLE)
-    .insert({
+  const createdAt = new Date().toISOString();
+  const storedJson = JSON.stringify(analysisResult ?? null);
+  const payloadCandidates = [
+    {
       user_id: userId,
       job_data: jobData,
       analysis_result: analysisResult,
-    });
+      created_at: createdAt,
+      stored_json: storedJson,
+    },
+    {
+      user_id: userId,
+      job_data: jobData,
+      analysis_result: analysisResult,
+      created_at: createdAt,
+    },
+    {
+      userid: userId,
+      jobdata: jobData,
+      analysisresult: analysisResult,
+      created_at: createdAt,
+      stored_json: storedJson,
+    },
+    {
+      userid: userId,
+      jobdata: jobData,
+      analysisresult: analysisResult,
+      created_at: createdAt,
+    },
+  ];
 
-  if (error) {
-    const err = new Error(`Failed to save analysis history: ${error.message}`);
+  let lastError = null;
+  for (const payload of payloadCandidates) {
+    const { error } = await supabaseClient
+      .from(ANALYSIS_HISTORY_TABLE)
+      .insert(payload);
+
+    if (!error) {
+      return;
+    }
+
+    lastError = error;
+  }
+
+  if (lastError) {
+    const err = new Error(`Failed to save analysis history: ${lastError.message}`);
     err.code = 'ANALYSIS_HISTORY_WRITE_FAILED';
     throw err;
   }

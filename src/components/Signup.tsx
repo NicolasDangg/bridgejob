@@ -1,3 +1,8 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { buildAuthRedirectUrl, supabase } from '../lib/supabase';
@@ -6,6 +11,7 @@ import { useAuth } from '../lib/AuthContext';
 export default function Signup() {
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -18,6 +24,7 @@ export default function Signup() {
     setError(null);
     setSent(false);
 
+    // Mock logic for development without Supabase
     if (import.meta.env.DEV && !supabase) {
       const mockUser = {
         id: `user-${Date.now()}`,
@@ -39,20 +46,45 @@ export default function Signup() {
       return;
     }
 
-    const redirectTo = buildAuthRedirectUrl('/dashboard');
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: redirectTo,
-        data: { full_name: fullName, plan: 'free' },
-      },
-    });
+    if (password.trim()) {
+      // Sign up with Password
+      const { error, data } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName, plan: 'free' },
+          emailRedirectTo: buildAuthRedirectUrl('/dashboard'),
+        },
+      });
 
-    if (error) {
-      setError(error.message);
+      if (error) {
+        setError(error.message);
+      } else {
+        // Supabase behavior: if email confirmation is required, session might be null.
+        // If not required, data.user will be populated.
+        if (data.user && data.session) {
+          navigate('/dashboard');
+        } else {
+          setSent(true);
+          setTimeout(() => navigate('/login'), 3000);
+        }
+      }
     } else {
-      setSent(true);
-      setTimeout(() => navigate('/login'), 2500);
+      // Sign up with Magic Link (OTP)
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: buildAuthRedirectUrl('/dashboard'),
+          data: { full_name: fullName, plan: 'free' },
+        },
+      });
+
+      if (error) {
+        setError(error.message);
+      } else {
+        setSent(true);
+        setTimeout(() => navigate('/login'), 3000);
+      }
     }
 
     setLoading(false);
@@ -64,13 +96,16 @@ export default function Signup() {
         <div className="text-center space-y-2">
           <div className="w-10 h-10 bg-slate-900 rounded-md flex items-center justify-center text-white text-sm font-bold mx-auto mb-4">BJ</div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Create your account</h1>
-          <p className="text-sm text-slate-500 font-medium">Enter your details and we’ll send you a magic link.</p>
+          <p className="text-sm text-slate-500 font-medium">Enter your details to get started.</p>
         </div>
 
         <div className="enterprise-card p-6 bg-white space-y-5">
           {sent ? (
-            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-              Magic link sent. Check your email to finish creating your account.
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 animate-in fade-in zoom-in duration-300">
+              {password.trim() 
+                ? "Account created! Please check your email to confirm your account."
+                : "Magic link sent. Check your email to finish creating your account."
+              }
             </div>
           ) : null}
 
@@ -95,17 +130,34 @@ export default function Signup() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="enterprise-input"
                 placeholder="name@company.com"
+                autoComplete="email"
               />
             </div>
+            
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Password (Optional)</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="enterprise-input"
+                placeholder="Enter a secure password"
+                autoComplete="new-password"
+              />
+              <p className="text-[10px] text-slate-400 font-medium italic">Leave blank to receive a magic link instead.</p>
+            </div>
 
-            {error && <p className="text-[11px] text-red-600 font-medium">{error}</p>}
+            {error && <p className="text-[11px] text-red-600 font-medium animate-in slide-in-from-top-1 duration-200">{error}</p>}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full enterprise-button h-10 mt-2"
+              className="w-full enterprise-button h-10 mt-2 flex items-center justify-center"
             >
-              {loading ? 'Sending Link...' : 'Create Magic Link'}
+              {loading 
+                ? (password.trim() ? 'Creating Account...' : 'Sending Link...') 
+                : (password.trim() ? 'Sign Up' : 'Create Magic Link')
+              }
             </button>
           </form>
         </div>

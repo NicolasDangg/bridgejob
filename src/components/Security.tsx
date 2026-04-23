@@ -1,9 +1,75 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { useEffect, useState } from "react";
 import { useAuth } from "../lib/AuthContext";
+import { supabase } from "../lib/supabase";
 import { Lock, Smartphone, Monitor, Mail } from "lucide-react";
 import DashboardLayout from "./DashboardLayout";
 
+interface ProfileData {
+  last_password_change: string;
+  mfa_enabled: boolean;
+  mfa_type: string;
+}
+
+interface UserSession {
+  id: string;
+  device: string;
+  location: string;
+  last_active: string;
+  is_current: boolean;
+}
+
 export default function Security() {
   const { user } = useAuth();
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [sessions, setSessions] = useState<UserSession[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchSecurityData() {
+      if (!user?.id) return;
+
+      try {
+        // Fetch profile
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('last_password_change, mfa_enabled, mfa_type')
+          .eq('id', user.id)
+          .single();
+
+        if (profileData) setProfile(profileData);
+
+        // Fetch sessions
+        const { data: sessionsData } = await supabase
+          .from('user_sessions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('last_active', { ascending: false });
+
+        if (sessionsData) setSessions(sessionsData);
+      } catch (error) {
+        console.error("Error fetching security data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchSecurityData();
+  }, [user?.id]);
+
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMonths = (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth());
+    
+    if (diffInMonths === 0) return "less than a month ago";
+    if (diffInMonths === 1) return "1 month ago";
+    return `${diffInMonths} months ago`;
+  };
 
   return (
     <DashboardLayout activeLabel="Settings">
@@ -58,7 +124,7 @@ export default function Security() {
               <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">Password</h2>
             </div>
             <p className="text-xs text-gray-500 font-medium leading-relaxed">
-              Your password was last changed 4 months ago. We recommend regular updates for maximum security.
+              Your password was last changed {profile?.last_password_change ? formatRelativeTime(profile.last_password_change) : "recently"}. We recommend regular updates for maximum security.
             </p>
             <button className="w-full py-2 bg-slate-900 text-white rounded-md text-[10px] font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors">Update Password</button>
           </div>
@@ -69,10 +135,12 @@ export default function Security() {
               <Smartphone className="w-5 h-5 text-slate-900" />
               <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">Two-Factor Auth</h2>
             </div>
-            <p className="text-xs font-bold text-emerald-600 leading-relaxed">
-              Enabled — SMS Verification
+            <p className={`text-xs font-bold leading-relaxed ${profile?.mfa_enabled ? "text-emerald-600" : "text-amber-600"}`}>
+              {profile?.mfa_enabled ? `Enabled — ${profile.mfa_type || "Authenticator"}` : "Disabled — Protect your account with 2FA"}
             </p>
-            <button className="w-full py-2 border border-gray-200 rounded-md text-[10px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-colors">Manage MFA</button>
+            <button className="w-full py-2 border border-gray-200 rounded-md text-[10px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-colors">
+              {profile?.mfa_enabled ? "Manage MFA" : "Setup MFA"}
+            </button>
           </div>
 
           {/* Active Sessions */}
@@ -82,20 +150,23 @@ export default function Security() {
               <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">Active Sessions</h2>
             </div>
             <div className="space-y-4">
-              {[
-                { device: 'MacBook Pro 16"', location: 'Singapore', time: 'Active Now', current: true },
-                { device: 'iPhone 15 Pro', location: 'Singapore', time: '2 hours ago', current: false }
-              ].map((session, i) => (
-                <div key={i} className="flex items-center justify-between py-3 border-t border-gray-50 first:border-0">
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-slate-900">{session.device}</p>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{session.location} • {session.time}</p>
+              {sessions.length > 0 ? (
+                sessions.map((session) => (
+                  <div key={session.id} className="flex items-center justify-between py-3 border-t border-gray-50 first:border-0">
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-slate-900">{session.device}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">
+                        {session.location} • {session.is_current ? "Active Now" : formatRelativeTime(session.last_active)}
+                      </p>
+                    </div>
+                    {!session.is_current && (
+                      <button className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:underline">Revoke</button>
+                    )}
                   </div>
-                  {!session.current && (
-                    <button className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:underline">Revoke</button>
-                  )}
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-xs text-gray-400 italic">No session data available.</p>
+              )}
             </div>
           </div>
         </div>
