@@ -438,7 +438,7 @@ const ReadinessScoreChart = ({ data }: { data: any[] }) => (
 // --- Main Component ---
 
 export default function Dashboard() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('Overview');
   const [jdText, setJdText] = useState('');
   const [candidateText, setCandidateText] = useState('');
@@ -484,7 +484,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from(ANALYSIS_HISTORY_TABLE)
         .select('*')
-        .eq('userid', user.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -584,7 +584,14 @@ export default function Dashboard() {
     try {
       const endpoint = buildAnalyzeEndpoint(import.meta.env.VITE_API_BASE_URL);
       const fallbackEndpoint = import.meta.env.DEV ? 'http://localhost:3001/api/analyze' : undefined;
-      const result = (await requestDashboardAnalysis(fetch, endpoint, { jd: jdText, skills: candidateText }, fallbackEndpoint)) as AnalyzeApiResponse;
+      const authToken = session?.access_token;
+      const result = (await requestDashboardAnalysis(
+        fetch,
+        endpoint,
+        { jd: jdText, skills: candidateText },
+        fallbackEndpoint,
+        authToken,
+      )) as AnalyzeApiResponse;
 
       if (result.success) {
         const normalizedResult = normalizeFitResponse(result.data, {
@@ -599,24 +606,6 @@ export default function Dashboard() {
 
         const savedRun = buildHistoryEntry(normalizedResult, jdText, candidateText);
         setHistory((current) => [savedRun, ...current.filter((item) => item.response.job_title !== normalizedResult.job_title)].slice(0, 10));
-
-        if (supabase && user?.id) {
-          const { error: saveError } = await supabase.from(ANALYSIS_HISTORY_TABLE).insert({
-            userid: user.id,
-            jobdata: {
-              jobTitle: normalizedResult.job_title,
-              jobDescription: jdText,
-              candidateProfile: candidateText,
-            },
-            analysisresult: normalizedResult,
-            stored_json: JSON.stringify(result.data),
-            created_at: new Date().toISOString(),
-          });
-
-          if (saveError) {
-            setError(saveError.message || 'Failed to save analysis history.');
-          }
-        }
 
         setUsageStats((current) => ({
           totalRuns: current.totalRuns + 1,
