@@ -330,7 +330,6 @@ function LiveDemo() {
               muted
               loop
               playsInline
-              poster="/Users/nicolasdangg/.gemini/antigravity/brain/d0f20765-86c5-4e01-afd7-eedd0a1161e6/gapless_poster_frame_1776826860827.png"
             >
               <source src="https://jxpnnzaddesjmkcl.public.blob.vercel-storage.com/output3.mp4" type="video/mp4" />
               Your browser does not support the video tag.
