@@ -8,6 +8,7 @@ node_modules/
 /coverage
 plan/
 .removedev/
+supabase/
 
 # Logs
 *.log

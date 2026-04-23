@@ -1,6 +1,6 @@
-import { motion, useScroll, useSpring, useTransform } from "framer-motion";
+import { motion, useScroll, useSpring, useTransform, useInView } from "framer-motion";
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from "react-router-dom";
-import { useEffect, ReactNode } from "react";
+import { useEffect, ReactNode, useRef } from "react";
 import { User as UserIcon, LogOut, LayoutDashboard, CreditCard, Sparkles, Mail, ChevronDown } from "lucide-react";
 import Dashboard from "./components/Dashboard";
 import Pricing from "./components/Pricing";
@@ -296,6 +296,17 @@ function Hero() {
 }
 
 function LiveDemo() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const isInView = useInView(videoRef, { amount: 0.3 });
+
+  useEffect(() => {
+    if (isInView) {
+      videoRef.current?.play().catch(e => console.error("Autoplay prevented:", e));
+    } else {
+      videoRef.current?.pause();
+    }
+  }, [isInView]);
+
   const scrollToSample = () => {
     const element = document.getElementById('sample-result');
     if (element) {
@@ -325,8 +336,8 @@ function LiveDemo() {
 
           <div className="relative bg-white p-2 rounded-xl border border-border-subtle shadow-2xl overflow-hidden">
             <video
+              ref={videoRef}
               className="w-full h-auto rounded-lg"
-              autoPlay
               muted
               loop
               playsInline

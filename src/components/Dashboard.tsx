@@ -415,10 +415,18 @@ const ReadinessScoreChart = ({ data }: { data: any[] }) => (
           tickLine={false}
           axisLine={false}
           tickFormatter={(val) => `${val}%`}
+          domain={[0, 100]}
         />
         <Tooltip
-          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-          itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+          contentStyle={{ 
+            borderRadius: '12px', 
+            border: 'none', 
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+            padding: '8px 12px'
+          }}
+          itemStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#3B82F6' }}
+          labelStyle={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 'bold' }}
+          formatter={(value: number) => [`${value}%`, 'Readiness']}
         />
         <Area
           type="monotone"
