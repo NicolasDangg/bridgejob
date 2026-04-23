@@ -1,4 +1,4 @@
-# BridgeJob (Vite + Express + Groq)
+# gapless (Vite + Express + Groq)
 
 ## Run Locally
 
@@ -8,7 +8,7 @@
    `npm install`
 2. Set `GROQ_API_KEY` in `.env` (see `.env.example`).
 3. Run the frontend:
-   `npm run dev`
+   `npm run dev:client`
 4. Run the API (separate terminal):
    `npm run dev:api`
 

@@ -6,6 +6,8 @@ node_modules/
 /out
 /.next
 /coverage
+plan/
+.removedev/
 
 # Logs
 *.log
@@ -41,3 +43,7 @@ yarn.lock
 
 # MD Files
 API_ARCHITECTURE.md
+test_full_flow.md
+test_analyze_endpoint.sh
+
+

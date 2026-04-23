@@ -13,7 +13,7 @@ export default function Privacy() {
           <div className="space-y-3">
             <h2 className="text-xl font-bold text-slate-900">1. Data Collection</h2>
             <p className="text-slate-600 leading-relaxed text-sm">
-              BridgeJob collects professional data including resumes, job descriptions, and career history to provide accurate gap analysis. We don't sell your personal data to third parties.
+              gapless collects professional data including resumes, job descriptions, and career history to provide accurate gap analysis. We don't sell your personal data to third parties.
             </p>
           </div>
 

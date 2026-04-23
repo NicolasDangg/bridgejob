@@ -1,19 +1,18 @@
 import { useAuth } from "../lib/AuthContext";
 import { Link } from "react-router-dom";
 import {
-  User,
   Settings,
   Shield,
-  Bell,
   CreditCard,
   ChevronRight,
-  Mail,
   Lock,
-  FileText
+  FileText,
+  LogOut
 } from "lucide-react";
+import DashboardLayout from "./DashboardLayout";
 
 export default function Accounts() {
-  const { user } = useAuth();
+  const { user, signOut, userPlan } = useAuth();
 
   if (!user) {
     return (
@@ -24,7 +23,7 @@ export default function Accounts() {
           </div>
           <div className="space-y-2">
             <h1 className="text-xl font-bold text-slate-900">Access Restricted</h1>
-            <p className="text-xs text-slate-500 leading-relaxed font-medium">Please authenticate to manage your professional profile and account settings.</p>
+            <p className="text-xs text-slate-500 leading-relaxed font-medium">Please authenticate to manage your account settings.</p>
           </div>
           <Link to="/login" className="enterprise-button h-10 px-8 flex items-center justify-center mx-auto">
             Go to Login
@@ -48,7 +47,7 @@ export default function Accounts() {
       title: "Billing & Subscription",
       icon: CreditCard,
       items: [
-        { label: "Current Tier", value: "Starter Plan", sublabel: "Standard individual access", path: "/billing" },
+        { label: "Current Tier", value: userPlan, sublabel: "Standard individual access", path: "/billing" },
         { label: "Payment Method", sublabel: "Manage cards and billing address", path: "/billing" },
         { label: "Invoice Archive", sublabel: "Review past transaction history", path: "/billing" }
       ]
@@ -72,15 +71,15 @@ export default function Accounts() {
   ];
 
   return (
-    <div className="flex-1 bg-surface-off-white overflow-auto py-12 px-6">
+    <DashboardLayout activeLabel="Settings">
       <div className="max-w-4xl mx-auto space-y-10">
-        <div className="pb-8 border-b border-border-subtle flex items-end justify-between">
+        <div className="pb-8 border-b border-gray-100 flex items-end justify-between">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Account Settings</h1>
-            <p className="text-sm text-slate-500 font-medium">Manage your professional credentials and system preferences.</p>
+            <p className="text-sm text-slate-500 font-medium">Manage your credentials and system preferences.</p>
           </div>
-          <div className="flex items-center gap-3 bg-white p-2 pr-4 rounded border border-border-subtle shadow-sm">
-            <div className="w-10 h-10 bg-slate-900 rounded flex items-center justify-center text-white text-xs font-bold uppercase tracking-tighter">
+          <div className="flex items-center gap-3 bg-white p-2 pr-4 rounded-md border border-gray-200 shadow-sm">
+            <div className="w-10 h-10 bg-slate-900 rounded-md flex items-center justify-center text-white text-xs font-bold uppercase tracking-tighter">
               {user.email?.charAt(0)}
             </div>
             <div>
@@ -92,10 +91,10 @@ export default function Accounts() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {sections.map((section) => (
-            <div key={section.title} className="enterprise-card flex flex-col h-full">
-              <div className="px-5 py-4 bg-surface-off-white border-b border-border-subtle flex items-center gap-3">
+            <div key={section.title} className="bg-white border border-gray-200 rounded-md flex flex-col h-full overflow-hidden shadow-sm">
+              <div className="px-5 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center gap-3">
                 <section.icon className="w-4 h-4 text-slate-400" />
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-widest">{section.title}</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{section.title}</span>
               </div>
               <div className="flex-1 p-2">
                 <div className="space-y-1">
@@ -103,7 +102,7 @@ export default function Accounts() {
                     <Link
                       key={item.label}
                       to={item.path || "#"}
-                      className="w-full flex items-center justify-between p-3 rounded hover:bg-surface-off-white transition-colors group text-left"
+                      className="w-full flex items-center justify-between p-3 rounded-md hover:bg-gray-50 transition-colors group text-left"
                     >
                       <div className="space-y-0.5">
                         <div className="text-xs font-bold text-slate-900">{item.label}</div>
@@ -125,17 +124,30 @@ export default function Accounts() {
           ))}
 
           {/* Help/Support Section */}
-          <div className="enterprise-card bg-slate-900 h-full flex flex-col justify-center p-8 space-y-4">
-            <h3 className="text-white text-lg font-bold tracking-tight">Need assistance?</h3>
-            <p className="text-slate-400 text-xs leading-relaxed font-medium">Our support team is available 24/7 for technical queries and account management help.</p>
-            <div className="pt-2">
-              <Link to="/contact" className="inline-block h-9 px-6 bg-white text-slate-900 text-[11px] font-bold uppercase tracking-widest rounded hover:bg-slate-100 transition-colors leading-9 text-center">
+          <div className="bg-slate-900 rounded-md h-full flex flex-col justify-center p-8 space-y-4 shadow-sm relative overflow-hidden">
+            <h3 className="text-white text-lg font-bold tracking-tight relative z-10">Need assistance?</h3>
+            <p className="text-slate-400 text-xs leading-relaxed font-medium relative z-10">Contact our support team.</p>
+            <div className="pt-2 relative z-10">
+              <Link to="/contact" className="inline-block h-9 px-6 bg-white text-slate-900 text-[11px] font-bold uppercase tracking-widest rounded-md hover:bg-slate-100 transition-colors leading-9 text-center">
                 Contact Support
               </Link>
             </div>
+            {/* Decorative element */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
           </div>
         </div>
+
+        {/* Sign Out Action */}
+        <div className="pt-10 border-t border-gray-100 flex justify-center">
+          <button
+            onClick={() => signOut()}
+            className="group flex items-center gap-3 px-6 py-3 rounded-md text-red-600 hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
+          >
+            <LogOut className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+            <span className="text-xs font-bold uppercase tracking-widest">Sign Out from Session</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

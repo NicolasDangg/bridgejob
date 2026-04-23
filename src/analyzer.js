@@ -41,7 +41,7 @@ export async function analyzeSkills(jd, skills, fetchImpl, options = {}) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.1-8b-instant',
+          model: 'llama-3.3-70b-versatile',
           temperature: 0,
           messages: [
             { role: 'system', content: buildSystemPrompt() },
@@ -78,7 +78,6 @@ export async function analyzeSkills(jd, skills, fetchImpl, options = {}) {
 
   const data = await response.json();
   const raw = data?.choices?.[0]?.message?.content;
-
   if (typeof raw !== 'string' || raw.trim() === '') {
     throw createDomainError('ANALYZE_INVALID_RESPONSE', 'Groq returned an unexpected response format.');
   }

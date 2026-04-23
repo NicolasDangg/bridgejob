@@ -3,24 +3,24 @@
 
 @theme {
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  
+
   --color-surface-white: #ffffff;
   --color-surface-off-white: #fafafa;
   --color-surface-soft-gray: #f3f4f6;
-  
+
   --color-border-subtle: #e5e7eb;
   --color-border-muted: #d1d5db;
   --color-border-action: #64748b;
-  
+
   --color-accent-primary: #1e293b;
   --color-accent-blue: #3b82f6;
-  
+
   --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
 @layer base {
   body {
-    @apply bg-surface-off-white text-slate-900 font-sans antialiased;
+    @apply bg-gray-50 text-slate-900 font-sans antialiased;
     letter-spacing: -0.01em;
   }
 }
@@ -29,15 +29,15 @@
   .enterprise-card {
     @apply bg-surface-white border border-border-subtle rounded-md shadow-subtle overflow-hidden;
   }
-  
+
   .enterprise-input {
     @apply w-full px-3 py-2 bg-surface-white border border-border-muted rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-accent-blue focus:border-accent-blue transition-all;
   }
-  
+
   .enterprise-button {
     @apply px-4 py-2 bg-slate-900 text-white rounded-md text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50;
   }
-  
+
   .enterprise-button-outline {
     @apply px-4 py-2 bg-white border border-border-muted text-slate-700 rounded-md text-sm font-medium hover:bg-surface-off-white transition-colors;
   }

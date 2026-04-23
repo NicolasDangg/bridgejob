@@ -13,7 +13,7 @@ export default function Terms() {
           <div className="space-y-3">
             <h2 className="text-xl font-bold text-slate-900">1. Acceptance of Terms</h2>
             <p className="text-slate-600 leading-relaxed text-sm">
-              By accessing BridgeJob, you agree to be bound by these terms. Our service provides career intelligence and analysis results meant for professional development.
+              By accessing gapless, you agree to be bound by these terms. Our service provides career intelligence and analysis results meant for professional development.
             </p>
           </div>
 
@@ -34,7 +34,7 @@ export default function Terms() {
           <div className="space-y-3">
             <h2 className="text-xl font-bold text-slate-900">4. Liability</h2>
             <p className="text-slate-600 leading-relaxed text-sm">
-              BridgeJob is not liable for career decisions or recruitment outcomes. We provide the tools to visualize gaps; the bridging remains the user's professional journey.
+              gapless is not liable for career decisions or recruitment outcomes. We provide the tools to visualize gaps; the bridging remains the user's professional journey.
             </p>
           </div>
         </section>

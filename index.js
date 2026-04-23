@@ -12,6 +12,6 @@ const HOST = '127.0.0.1';
 
 app.listen(PORT, HOST, () => {
   console.log(
-    `BridgeJob API listening on ${HOST}:${PORT}`,
+    `gapless API listening on ${HOST}:${PORT}`,
   );
 });

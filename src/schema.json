@@ -14,7 +14,8 @@
       "gap_detail": "",
       "priority": "CRITICAL | IMPORTANT | NICE TO HAVE",
       "learnability": "FAST | MEDIUM | SLOW",
-      "action": ""
+      "action": "",
+      "jd_reference": ""
     }
   ],
   "gaps": [
@@ -22,11 +23,14 @@
       "skill": "",
       "priority": "CRITICAL | IMPORTANT | NICE TO HAVE",
       "learnability": "FAST | MEDIUM | SLOW",
-      "action": ""
+      "action": "",
+      "jd_reference": ""
     }
   ],
   "noise_skills": [""],
   "readiness_score": 0,
+  "total_qualifications": 0,
+  "classifications_count": 0,
   "bridge_steps": [""],
   "analyst_note": ""
 }

@@ -1,14 +1,14 @@
 import { useAuth } from "../lib/AuthContext";
-import { Link } from "react-router-dom";
 import { Bell, Mail, Eye } from "lucide-react";
+import DashboardLayout from "./DashboardLayout";
 
 export default function Notifications() {
   const { user } = useAuth();
 
   return (
-    <div className="flex-1 bg-surface-off-white py-12 px-6 overflow-auto">
+    <DashboardLayout activeLabel="Settings">
       <div className="max-w-4xl mx-auto space-y-10">
-        <div className="pb-8 border-b border-border-subtle">
+        <div className="pb-8 border-b border-gray-100">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Notification Settings</h1>
           <p className="text-sm text-slate-500 font-medium">
             Control how and when you receive career intelligence alerts
@@ -16,7 +16,7 @@ export default function Notifications() {
           </p>
         </div>
 
-        <div className="enterprise-card divide-y divide-border-subtle overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-md divide-y divide-gray-100 overflow-hidden shadow-sm">
           <div className="p-8 space-y-6">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
@@ -59,7 +59,7 @@ export default function Notifications() {
                   <Eye className="w-5 h-5 text-slate-900" />
                   <h2 className="text-sm font-bold uppercase tracking-widest text-slate-900">In-App Alerts</h2>
                 </div>
-                <p className="text-xs text-slate-500 font-medium leading-relaxed">Visual banners within the BridgeJob dashboard.</p>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">Visual banners within the gapless dashboard.</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" defaultChecked />
@@ -68,13 +68,7 @@ export default function Notifications() {
             </div>
           </div>
         </div>
-
-        <div className="pt-10">
-          <Link to="/accounts" className="text-xs font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-colors">
-            ← Back to Accounts
-          </Link>
-        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

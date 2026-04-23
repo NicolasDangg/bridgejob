@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useRef } from 'react';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { Marquee } from './Marquee';
 import { Database, Map, Share2, Zap, ArrowRight, CheckCircle2 } from 'lucide-react';
 
@@ -14,12 +14,12 @@ const FEATURES = [
         <div className="space-y-2">
           <h3 className="text-xl font-bold tracking-tight text-slate-900">1.2M+ Real-world signals</h3>
           <p className="text-sm text-slate-600 leading-relaxed">
-            BridgeJob is trained on a proprietary dataset of 1.2M+ live job descriptions and verified candidate outcomes from 2024-2026. This ensure your analysis reflects current standards, not outdated trends.
+            <span className="font-bold text-slate-900">gapless</span> is trained on a proprietary dataset of 1.2M+ live job descriptions and verified candidate outcomes from 2024-2026. This ensures your analysis reflects current standards, not outdated trends.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-4 pt-2">
           <div className="enterprise-card p-4 bg-slate-50 border-none">
-            <div className="text-xl font-bold text-slate-900">99.8%</div>
+            <div className="text-xl font-bold text-slate-900">95.8%</div>
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Accuracy Rate</div>
           </div>
           <div className="enterprise-card p-4 bg-slate-50 border-none">
@@ -95,7 +95,7 @@ const FEATURES = [
             Our optimized inference engine delivers deep contextual analysis in under 5 seconds. Built on globally distributed infrastructure to ensure 99.99% availability for enterprise users.
           </p>
         </div>
-        <div className="p-4 bg-slate-900 rounded-lg space-y-3">
+        <div className="p-4 bg-slate-900 rounded-md space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Global Latency</span>
             <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">420ms</span>
@@ -109,45 +109,90 @@ const FEATURES = [
   }
 ];
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6 }
+  },
+};
+
 export const FeaturesShowcase = () => {
   const [activeTab, setActiveTab] = useState(0);
+  const containerRef = useRef(null);
+
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start end", "end start"]
+  });
+
+  const yBackground = useTransform(scrollYProgress, [0, 1], [-100, 100]);
+  const rotateBackground = useTransform(scrollYProgress, [0, 1], [0, 90]);
 
   return (
-    <section className="bg-surface-white border-t border-border-subtle">
+    <section ref={containerRef} className="relative bg-surface-white border-t border-border-subtle overflow-hidden">
+      <motion.div
+        style={{ y: yBackground, rotate: rotateBackground }}
+        className="absolute top-1/4 right-[5%] w-64 h-64 bg-slate-50 rounded-full blur-3xl -z-10"
+      />
+
       <Marquee />
 
-      <div className="max-w-7xl mx-auto px-6 py-24">
-        <div className="text-center space-y-4 mb-20">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em]">Operational Capabilities</h2>
-          <h3 className="text-4xl font-bold tracking-tight text-slate-900">Precision engineered for career intelligence.</h3>
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em] pt-2">Suitable for real-world companies today</h2>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-100px" }}
+        className="max-w-7xl mx-auto px-6 py-32"
+      >
+        <div className="text-center space-y-4 mb-24">
+          <motion.h2 variants={itemVariants} className="text-xs font-bold text-slate-400 uppercase tracking-[0.4em]">Operational Capabilities</motion.h2>
+          <motion.h3 variants={itemVariants} className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 max-w-3xl mx-auto">
+            Precision engineered for career intelligence.
+          </motion.h3>
+          <motion.h2 variants={itemVariants} className="text-xs font-bold text-slate-400 uppercase tracking-[0.3em] pt-4">Suitable for modern recruitment cycles</motion.h2>
         </div>
 
-        <div className="flex items-stretch justify-center max-w-5xl mx-auto border border-border-subtle rounded-xl overflow-hidden shadow-sm bg-white">
+        <motion.div
+          variants={itemVariants}
+          className="flex flex-col md:flex-row items-stretch justify-center max-w-6xl mx-auto border border-border-subtle rounded-md overflow-hidden shadow-2xl shadow-slate-100 bg-white"
+        >
           {/* Left Panel - Buttons */}
-          <div className="w-1/3 flex flex-col border-r border-border-subtle bg-slate-50/50">
+          <div className="w-full md:w-[350px] flex flex-col border-r border-border-subtle bg-slate-50/50">
             {FEATURES.map((feature, idx) => (
               <button
                 key={feature.id}
                 onClick={() => setActiveTab(idx)}
-                className={`flex flex-col items-start p-6 py-8 text-left transition-all relative border-b border-border-subtle last:border-b-0 ${activeTab === idx
+                className={`flex flex-col items-start p-8 text-left transition-all relative border-b border-border-subtle last:border-b-0 ${activeTab === idx
                   ? 'bg-white z-10'
-                  : 'hover:bg-slate-100/50 opacity-60'
+                  : 'hover:bg-slate-100/50 opacity-50'
                   }`}
               >
                 {activeTab === idx && (
                   <motion.div
                     layoutId="active-indicator"
-                    className="absolute left-0 top-0 bottom-0 w-1 bg-slate-900"
+                    className="absolute left-0 top-0 bottom-0 w-1.5 bg-slate-900"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
-                <div className="flex items-center gap-3 mb-2">
-                  <feature.icon className={`w-4 h-4 ${activeTab === idx ? 'text-slate-900' : 'text-slate-400'}`} />
+                <div className="flex items-center gap-4 mb-3">
+                  <feature.icon className={`w-5 h-5 ${activeTab === idx ? 'text-slate-900' : 'text-slate-400'}`} />
                   <span className={`text-xs font-bold uppercase tracking-widest ${activeTab === idx ? 'text-slate-900' : 'text-slate-500'}`}>
                     {feature.title}
                   </span>
                 </div>
-                <p className="text-[11px] font-medium text-slate-500 leading-snug">
+                <p className="text-[11px] font-semibold text-slate-500 leading-snug">
                   {feature.description}
                 </p>
               </button>
@@ -155,35 +200,43 @@ export const FeaturesShowcase = () => {
           </div>
 
           {/* Right Panel - Content */}
-          <div className="flex-1 bg-white p-12 flex flex-col justify-center relative min-h-[480px]">
+          <div className="flex-1 bg-white p-16 flex flex-col justify-center relative min-h-[550px]">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-                className="space-y-8"
+                initial={{ opacity: 0, scale: 0.98, x: 10 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 1.02, x: -10 }}
+                transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                className="space-y-10"
               >
-                <div className="w-12 h-12 rounded-lg bg-slate-900 flex items-center justify-center mb-8">
+                <div className="w-16 h-16 rounded-md bg-slate-900 flex items-center justify-center mb-10 shadow-lg shadow-slate-200">
                   {(() => {
                     const Icon = FEATURES[activeTab].icon;
-                    return <Icon className="w-6 h-6 text-white" />;
+                    return <Icon className="w-8 h-8 text-white" />;
                   })()}
                 </div>
 
-                {FEATURES[activeTab].content}
+                <div className="prose-container">
+                  {FEATURES[activeTab].content}
+                </div>
 
-                <div className="pt-8 border-t border-border-subtle">
-                  <button className="flex items-center gap-2 text-[10px] font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-colors">
-                    View technical documentation <ArrowRight className="w-3.5 h-3.5" />
+                <div className="pt-10 border-t border-border-subtle flex items-center justify-between">
+                  <button className="flex items-center gap-2 text-[10px] font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-colors group">
+                    View technical documentation
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </button>
+                  <div className="flex gap-1.5">
+                    {FEATURES.map((_, i) => (
+                      <div key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === activeTab ? 'bg-slate-900' : 'bg-slate-200'}`} />
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             </AnimatePresence>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </section>
   );
 };
