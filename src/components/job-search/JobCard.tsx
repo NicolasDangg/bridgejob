@@ -12,7 +12,7 @@ function extractDomain(urlString?: string): string | null {
 
   try {
     const url = new URL(urlString);
-    const hostname = url.hostname.replace(/^www./i, '').toLowerCase();
+    const hostname = url.hostname.replace(/^www\./i, '').toLowerCase();
     return hostname || null;
   } catch {
     return null;
