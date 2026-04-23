@@ -1,26 +1,55 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Globe, ExternalLink, Bookmark, TrendingUp } from 'lucide-react';
+import { MapPin, Building2, ExternalLink, Bookmark, TrendingUp } from 'lucide-react';
 import { Job } from '../../services/jobService';
 
 interface JobCardProps {
   job: Job;
 }
 
-const COMPANY_LOGOS: Record<Job['company'], string> = {
-  Google: 'https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png',
-  Meta: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Meta_Platforms_Inc._logo.svg/200px-Meta_Platforms_Inc._logo.svg.png',
-  TikTok: 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a9/TikTok_logo.svg/200px-TikTok_logo.svg.png',
-  Amazon: 'https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg',
-};
+function extractDomain(urlString?: string): string | null {
+  if (!urlString) return null;
+
+  try {
+    const url = new URL(urlString);
+    const hostname = url.hostname.replace(/^www./i, '').toLowerCase();
+    return hostname || null;
+  } catch {
+    return null;
+  }
+}
+
+function extractDomainFromCompany(company?: string): string | null {
+  if (!company) return null;
+
+  const normalized = company
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '');
+
+  if (!normalized) return null;
+
+  return normalized + '.com';
+}
+
+function getCompanyDomain(job: Job): string | null {
+  return extractDomain(job.url) ?? extractDomainFromCompany(job.company);
+}
+
+function buildFaviconUrl(domain: string): string {
+  return 'https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://' + domain + '&size=64';
+}
 
 export default function JobCard({ job }: JobCardProps) {
   const [logoFailed, setLogoFailed] = React.useState(false);
-  const logoSrc = COMPANY_LOGOS[job.company as keyof typeof COMPANY_LOGOS] ?? job.logo;
+  const companyDomain = React.useMemo(() => getCompanyDomain(job), [job.company, job.url]);
+  const logoSrc = companyDomain ? buildFaviconUrl(companyDomain) : null;
 
   React.useEffect(() => {
     setLogoFailed(false);
-  }, [job.id]);
+  }, [job.id, companyDomain]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -41,12 +70,12 @@ export default function JobCard({ job }: JobCardProps) {
               {logoSrc && !logoFailed ? (
                 <img
                   src={logoSrc}
-                  alt={`${job.company} logo`}
+                  alt={job.company + ' logo'}
                   className="w-full h-full object-contain"
                   onError={() => setLogoFailed(true)}
                 />
               ) : (
-                <Globe className="text-gray-300" size={20} />
+                <Building2 className="text-gray-300" size={20} />
               )}
             </div>
             <div>
