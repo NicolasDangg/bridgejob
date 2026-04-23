@@ -19,7 +19,7 @@ export type FitResponse = {
   overall_summary: string;
   strong_matches: MatchItem[];
   partial_matches: MatchItem[];
-  gaps: MatchItem[];
+  gaps?: MatchItem[];
   noise_skills: string[];
   readiness_score: number;
   bridge_steps: string[];
@@ -78,7 +78,7 @@ function mapFitResponseToAnalysis(id: string, date: string, response: FitRespons
   }));
 
   // Map true gaps (complete missing skills, no gap_detail field typically)
-  const trueGaps = response.gaps.map(g => ({
+  const trueGaps = (response.gaps || []).map(g => ({
     name: g.skill,
     priority: (g.priority?.toLowerCase() as any) || 'critical',
     recommendation: 'This is a critical missing skill. ' + (g.gap_detail || 'No specific recommendation provided.'),
@@ -88,7 +88,6 @@ function mapFitResponseToAnalysis(id: string, date: string, response: FitRespons
       { title: 'Search for courses on ' + g.skill, url: 'https://www.google.com/search?q=learn+' + encodeURIComponent(g.skill) }
     ]
   }));
-
   // Combine: true gaps first (more critical), then partial gaps
   const allGaps = [...trueGaps, ...partialGaps];
 
