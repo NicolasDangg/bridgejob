@@ -43,3 +43,7 @@ yarn.lock
 
 # MD Files
 API_ARCHITECTURE.md
+test_full_flow.md
+test_analyze_endpoint.sh
+
+

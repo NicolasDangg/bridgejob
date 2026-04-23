@@ -52,6 +52,7 @@ export type FitResponse = {
   overall_summary: string;
   strong_matches: MatchItem[];
   partial_matches: MatchItem[];
+  gaps: MatchItem[];
   noise_skills: string[];
   readiness_score: number;
   bridge_steps: string[];
@@ -233,6 +234,7 @@ function normalizeFitResponse(value: unknown, jobData?: unknown): FitResponse {
     overall_summary: readFirstString([response.overall_summary]) || DEFAULT_HISTORY_SUMMARY,
     strong_matches: normalizeMatchArray(response.strong_matches),
     partial_matches: normalizeMatchArray(response.partial_matches),
+    gaps: normalizeMatchArray(response.gaps),
     noise_skills: normalizeStringArray(response.noise_skills),
     readiness_score: normalizedReadinessScore,
     bridge_steps: normalizeStringArray(response.bridge_steps),
@@ -243,10 +245,10 @@ function normalizeFitResponse(value: unknown, jobData?: unknown): FitResponse {
 function mapHistoryRow(row: AnalysisHistoryRow | null | undefined): HistoryEntry {
   const parsedRow = parseMaybeJsonObject(row);
   const rawJobData = row?.jobdata ?? row?.job_data ?? parsedRow.jobdata ?? parsedRow.job_data;
-  
+
   // Prefer stored_json if available, otherwise fall back to analysisresult
   let rawAnalysisResult = row?.stored_json ?? row?.analysisresult ?? row?.analysis_result ?? parsedRow.stored_json ?? parsedRow.analysisresult ?? parsedRow.analysis_result ?? parsedRow.response;
-  
+
   // If stored_json is a string, parse it
   if (typeof rawAnalysisResult === 'string') {
     try {
@@ -356,6 +358,8 @@ function HistoryCard({ entry, onLoad }: HistoryCardProps) {
   const historySummary = entry.response?.overall_summary || DEFAULT_HISTORY_SUMMARY;
   const historyReadiness = normalizeReadinessScore(entry.response?.readiness_score);
   const historyMatches = Array.isArray(entry.response?.strong_matches) ? entry.response.strong_matches.length : 0;
+  const historyPartial = Array.isArray(entry.response?.partial_matches) ? entry.response.partial_matches.length : 0;
+  const historyGaps = Array.isArray(entry.response?.gaps) ? entry.response.gaps.length : 0;
 
   return (
     <Card
@@ -373,10 +377,63 @@ function HistoryCard({ entry, onLoad }: HistoryCardProps) {
           <div className="w-2 h-2 rounded-full bg-emerald-500" />
           <span className="text-[10px] font-bold text-gray-400 uppercase">{historyMatches} Matches</span>
         </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-amber-500" />
+          <span className="text-[10px] font-bold text-gray-400 uppercase">{historyPartial} Partial</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-red-500" />
+          <span className="text-[10px] font-bold text-gray-400 uppercase">{historyGaps} Gaps</span>
+        </div>
       </div>
     </Card>
   );
 }
+
+const ReadinessScoreChart = ({ data }: { data: any[] }) => (
+  <div className="h-64 -mx-2">
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={data}>
+        <defs>
+          <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1} />
+            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+        <XAxis
+          dataKey="month"
+          stroke="#9CA3AF"
+          fontSize={10}
+          tickLine={false}
+          axisLine={false}
+        />
+        <YAxis
+          orientation="right"
+          stroke="#9CA3AF"
+          fontSize={10}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(val) => `${val}%`}
+        />
+        <Tooltip
+          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+          itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+        />
+        <Area
+          type="monotone"
+          dataKey="value"
+          stroke="#3B82F6"
+          strokeWidth={2}
+          fillOpacity={1}
+          fill="url(#colorValue)"
+          dot={{ r: 3, fill: '#3B82F6', strokeWidth: 2, stroke: '#fff' }}
+          activeDot={{ r: 5, fill: '#3B82F6', stroke: '#fff', strokeWidth: 2 }}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  </div>
+);
 
 // --- Main Component ---
 
@@ -469,7 +526,8 @@ export default function Dashboard() {
 
     const allItems = [
       ...response.strong_matches.map((m) => ({ ...m, status: 'MATCH', priority: 'RESOLVED' as const })),
-      ...response.partial_matches.map((m) => ({ ...m, status: 'GAP' })),
+      ...response.partial_matches.map((m) => ({ ...m, status: 'PARTIAL' })),
+      ...response.gaps.map((m) => ({ ...m, status: 'GAP' })),
     ];
 
     const priorityOrder = { CRITICAL: 0, IMPORTANT: 1, 'NICE TO HAVE': 2, RESOLVED: 3 };
@@ -582,17 +640,6 @@ export default function Dashboard() {
       label: new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date(entry.createdAt))
     }));
 
-    if (response) {
-      const isNew = !history.some(h => h.response.job_title === response.job_title && (Date.now() - new Date(h.createdAt).getTime()) < 5000);
-      if (isNew) {
-        points.push({
-          date: new Date(),
-          value: response.readiness_score,
-          label: 'Now'
-        });
-      }
-    }
-
     points.sort((a, b) => a.date.getTime() - b.date.getTime());
 
     if (points.length === 0) {
@@ -602,11 +649,11 @@ export default function Dashboard() {
     }
 
     return points.slice(-10).map(p => ({ month: p.label, value: p.value }));
-  }, [history, response]);
+  }, [history]);
 
   return (
-    <DashboardLayout 
-      activeLabel={activeTab} 
+    <DashboardLayout
+      activeLabel={activeTab}
       onTabChange={setActiveTab}
       headerContent={response && (
         <div className="flex items-center gap-2 mt-1">
@@ -713,7 +760,8 @@ export default function Dashboard() {
                       </h2>
                       <div className="text-right">
                         <span className="text-xl font-bold text-red-500">
-                          {response.partial_matches.filter(m => m.priority === 'CRITICAL').length}
+                          {(response.gaps?.filter(m => m.priority === 'CRITICAL').length ?? 0) +
+                            (response.partial_matches?.filter(m => m.priority === 'CRITICAL').length ?? 0)}
                         </span>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Critical Gaps</p>
                       </div>
@@ -723,32 +771,39 @@ export default function Dashboard() {
                     {sortedResults.slice(0, 10).map((item, idx) => (
                       <div key={idx} className="flex flex-col border-b border-gray-50 last:border-0">
                         <button
-                          onClick={() => item.status === 'GAP' && toggleOverviewGap(item.skill)}
-                          disabled={item.status !== 'GAP'}
+                          onClick={() => item.status !== 'MATCH' && toggleOverviewGap(item.skill)}
+                          disabled={item.status === 'MATCH'}
                           className={cn(
                             "flex items-center gap-3 p-2 w-full text-left transition-colors rounded-md group",
-                            item.status === 'GAP' ? "hover:bg-red-50/50 cursor-pointer" : "cursor-default"
+                            item.status === 'GAP' ? "hover:bg-red-50/50 cursor-pointer" :
+                              item.status === 'PARTIAL' ? "hover:bg-amber-50/50 cursor-pointer" : "cursor-default"
                           )}
                         >
                           <div className={cn(
                             "w-8 h-8 rounded-md flex items-center justify-center shrink-0",
-                            item.status === 'MATCH' ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
+                            item.status === 'MATCH' ? "bg-emerald-50 text-emerald-600" :
+                              item.status === 'PARTIAL' ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600"
                           )}>
                             {item.status === 'MATCH' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
                           </div>
                           <div className="flex-1">
                             <h4 className="text-xs font-semibold">{item.skill}</h4>
-                            <p className="text-[10px] text-gray-400">{item.status === 'MATCH' ? 'Strong Match' : 'Notable Gap'}</p>
+                            <p className="text-[10px] text-gray-400">
+                              {item.status === 'MATCH' ? 'Strong Match' :
+                                item.status === 'PARTIAL' ? 'Partial Match' : 'Notable Gap'}
+                            </p>
                           </div>
                           <div className="flex items-center gap-2">
                             <PriorityBadge priority={(item as any).priority} />
-                            {item.status === 'GAP' && (
-                              <ChevronRight 
-                                size={14} 
+                            {item.status !== 'MATCH' && (
+                              <ChevronRight
+                                size={14}
                                 className={cn(
                                   "text-gray-300 transition-transform group-hover:text-red-400",
-                                  expandedOverviewGaps.has(item.skill) && "rotate-90 text-red-500"
-                                )} 
+                                  expandedOverviewGaps.has(item.skill) && (
+                                    item.status === 'PARTIAL' ? "rotate-90 text-amber-500" : "rotate-90 text-red-500"
+                                  )
+                                )}
                               />
                             )}
                           </div>
@@ -763,15 +818,24 @@ export default function Dashboard() {
                               className="overflow-hidden"
                             >
                               <div className="pl-11 pr-2 pb-3 text-[11px] text-gray-600 leading-relaxed">
-                                <div className="bg-red-50/30 p-3 rounded-md border border-red-100/50">
-                                  <p className="font-bold text-[10px] text-red-900 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                                    <Sparkles size={10} /> Gap Analysis
+                                <div className={cn(
+                                  "p-3 rounded-md border",
+                                  item.status === 'PARTIAL' ? "bg-amber-50/30 border-amber-100/50" : "bg-red-50/30 border-red-100/50"
+                                )}>
+                                  <p className={cn(
+                                    "font-bold text-[10px] uppercase tracking-wider mb-1.5 flex items-center gap-1",
+                                    item.status === 'PARTIAL' ? "text-amber-900" : "text-red-900"
+                                  )}>
+                                    <Sparkles size={10} /> {item.status === 'PARTIAL' ? 'Partial Match Analysis' : 'Gap Analysis'}
                                   </p>
                                   <div className="text-gray-700 font-medium">
-                                    {item.gap_detail || "The AI identified this as a significant requirement that isn't fully matched in your profile."}
+                                    {item.gap_detail || item.note || "The AI identified this as a requirement that isn't fully matched in your profile."}
                                   </div>
                                   {item.action && (
-                                    <div className="mt-2.5 pt-2.5 border-t border-red-100/50">
+                                    <div className={cn(
+                                      "mt-2.5 pt-2.5 border-t",
+                                      item.status === 'PARTIAL' ? "border-amber-100/50" : "border-red-100/50"
+                                    )}>
                                       <p className="font-bold text-[10px] text-slate-800 uppercase tracking-wider mb-1.5 flex items-center gap-1">
                                         <Target size={10} /> Recommended Action
                                       </p>
@@ -818,48 +882,7 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="h-64 -mx-2">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={netWorthData}>
-                        <defs>
-                          <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1} />
-                            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-                        <XAxis
-                          dataKey="month"
-                          stroke="#9CA3AF"
-                          fontSize={10}
-                          tickLine={false}
-                          axisLine={false}
-                        />
-                        <YAxis
-                          orientation="right"
-                          stroke="#9CA3AF"
-                          fontSize={10}
-                          tickLine={false}
-                          axisLine={false}
-                          tickFormatter={(val) => `${val}%`}
-                        />
-                        <Tooltip
-                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-                          itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="value"
-                          stroke="#3B82F6"
-                          strokeWidth={2}
-                          fillOpacity={1}
-                          fill="url(#colorValue)"
-                          dot={{ r: 3, fill: '#3B82F6', strokeWidth: 2, stroke: '#fff' }}
-                          activeDot={{ r: 5, fill: '#3B82F6', stroke: '#fff', strokeWidth: 2 }}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <ReadinessScoreChart data={netWorthData} />
                 </Card>
               )}
             </>
@@ -881,101 +904,137 @@ export default function Dashboard() {
                 </Card>
               )}
               {response && (
-                <Card subtitle="Detailed Mapping" title={response.job_title}>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-gray-100">
-                          <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Skill</th>
-                          <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
-                          <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Priority</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {sortedResults.map((item, idx) => (
-                          <React.Fragment key={idx}>
-                            <tr
-                              onClick={() => item.status === 'GAP' && toggleReadinessGap(item.skill)}
-                              className={cn(
-                                "hover:bg-gray-50 transition-colors group",
-                                item.status === 'GAP' && "cursor-pointer"
-                              )}
-                            >
-                              <td className="px-4 py-3 text-sm font-semibold text-gray-900">
-                                <div className="flex items-center gap-2">
-                                  {item.status === 'GAP' && (
-                                    <ChevronRight
-                                      size={12}
-                                      className={cn(
-                                        "text-gray-300 transition-transform group-hover:text-red-400",
-                                        expandedReadinessGaps.has(item.skill) && "rotate-90 text-red-500"
-                                      )}
-                                    />
-                                  )}
-                                  {item.skill}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3">
-                                {item.status === 'MATCH' ? (
-                                  <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
-                                    <CheckCircle2 size={12} /> Match
-                                  </span>
-                                ) : (
-                                  <span className="text-xs text-red-600 font-medium flex items-center gap-1">
-                                    <AlertCircle size={12} /> Gap
-                                  </span>
+                <>
+                  <Card
+                    subtitle="Readiness Score Progress"
+                    title={response.job_title}
+                    className="mb-8"
+                  >
+                    <div className="flex items-end justify-between mb-8">
+                      <div>
+                        <h2 className="text-3xl font-bold tracking-tight">{response.readiness_score}%</h2>
+                        <p className={cn(
+                          "text-sm font-medium mt-1",
+                          response.readiness_score > 70 ? "text-emerald-500" : "text-orange-500"
+                        )}>
+                          {response.readiness_score > 70 ? "Above average" : "Keep improving"}
+                        </p>
+                      </div>
+                    </div>
+                    <ReadinessScoreChart data={netWorthData} />
+                  </Card>
+
+                  <Card subtitle="Detailed Mapping" title={response.job_title}>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-gray-100">
+                            <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Skill</th>
+                            <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                            <th className="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Priority</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {sortedResults.map((item, idx) => (
+                            <React.Fragment key={idx}>
+                              <tr
+                                onClick={() => item.status !== 'MATCH' && toggleReadinessGap(item.skill)}
+                                className={cn(
+                                  "hover:bg-gray-50 transition-colors group",
+                                  item.status !== 'MATCH' && "cursor-pointer"
                                 )}
-                              </td>
-                              <td className="px-4 py-3">
-                                <PriorityBadge priority={(item as any).priority} />
-                              </td>
-                            </tr>
-                            <AnimatePresence>
-                              {expandedReadinessGaps.has(item.skill) && (
-                                <tr className="border-none">
-                                  <td colSpan={3} className="px-4 py-0 border-none">
-                                    <motion.div
-                                      initial={{ height: 0, opacity: 0 }}
-                                      animate={{ height: 'auto', opacity: 1 }}
-                                      exit={{ height: 0, opacity: 0 }}
-                                      transition={{ duration: 0.2 }}
-                                      className="overflow-hidden"
-                                    >
-                                      <div className="pb-4 pt-1">
-                                        <div className="bg-red-50/30 p-4 rounded-md border border-red-100/50 shadow-inner">
-                                          <div className="flex items-start gap-4">
-                                            <div className="flex-1">
-                                              <p className="font-bold text-[10px] text-red-900 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                                <Sparkles size={10} /> In-Depth Gap Analysis
-                                              </p>
-                                              <p className="text-xs text-gray-700 leading-relaxed font-medium">
-                                                {item.gap_detail || "Detailed AI assessment of this specific skill gap based on your profile and JD requirements."}
-                                              </p>
-                                            </div>
-                                            {item.action && (
-                                              <div className="flex-1 border-l border-red-100/50 pl-4 ml-4">
-                                                <p className="font-bold text-[10px] text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                                  <Target size={10} /> Strategic Action
+                              >
+                                <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                                  <div className="flex items-center gap-2">
+                                    {item.status !== 'MATCH' && (
+                                      <ChevronRight
+                                        size={12}
+                                        className={cn(
+                                          "text-gray-300 transition-transform group-hover:text-red-400",
+                                          expandedReadinessGaps.has(item.skill) && (
+                                            item.status === 'PARTIAL' ? "rotate-90 text-amber-500" : "rotate-90 text-red-500"
+                                          )
+                                        )}
+                                      />
+                                    )}
+                                    {item.skill}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  {item.status === 'MATCH' ? (
+                                    <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                                      <CheckCircle2 size={12} /> Match
+                                    </span>
+                                  ) : item.status === 'PARTIAL' ? (
+                                    <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
+                                      <AlertCircle size={12} /> Partial
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-red-600 font-medium flex items-center gap-1">
+                                      <AlertCircle size={12} /> Gap
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <PriorityBadge priority={(item as any).priority} />
+                                </td>
+                              </tr>
+                              <AnimatePresence>
+                                {expandedReadinessGaps.has(item.skill) && (
+                                  <tr className="border-none">
+                                    <td colSpan={3} className="px-4 py-0 border-none">
+                                      <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="overflow-hidden"
+                                      >
+                                        <div className="pb-4 pt-1">
+                                          <div className={cn(
+                                            "p-4 rounded-md border shadow-inner",
+                                            item.status === 'PARTIAL' ? "bg-amber-50/30 border-amber-100/50" : "bg-red-50/30 border-red-100/50"
+                                          )}>
+                                            <div className="flex items-start gap-4">
+                                              <div className="flex-1">
+                                                <p className={cn(
+                                                  "font-bold text-[10px] uppercase tracking-wider mb-2 flex items-center gap-1",
+                                                  item.status === 'PARTIAL' ? "text-amber-900" : "text-red-900"
+                                                )}>
+                                                  <Sparkles size={10} /> {item.status === 'PARTIAL' ? 'In-Depth Partial Match Analysis' : 'In-Depth Gap Analysis'}
                                                 </p>
-                                                <p className="text-xs text-slate-600 leading-relaxed">
-                                                  {item.action}
+                                                <p className="text-xs text-gray-700 leading-relaxed font-medium">
+                                                  {item.gap_detail || item.note || "Detailed AI assessment of this specific requirement based on your profile and JD requirements."}
                                                 </p>
                                               </div>
-                                            )}
+                                              {item.action && (
+                                                <div className={cn(
+                                                  "flex-1 border-l pl-4 ml-4",
+                                                  item.status === 'PARTIAL' ? "border-amber-100/50" : "border-red-100/50"
+                                                )}>
+                                                  <p className="font-bold text-[10px] text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                                    <Target size={10} /> Strategic Action
+                                                  </p>
+                                                  <p className="text-xs text-slate-600 leading-relaxed">
+                                                    {item.action}
+                                                  </p>
+                                                </div>
+                                              )}
+                                            </div>
                                           </div>
                                         </div>
-                                      </div>
-                                    </motion.div>
-                                  </td>
-                                </tr>
-                              )}
-                            </AnimatePresence>
-                          </React.Fragment>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
+                                      </motion.div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </AnimatePresence>
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </Card>
+                </>
               )}
             </>
           )}

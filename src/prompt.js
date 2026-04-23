@@ -309,6 +309,17 @@ Additional rules:
 - Do not be encouraging for encouragement's sake — if the candidate is severely underqualified, say so clearly and explain why
 - If the JD is too vague to extract meaningful requirements, say so and list what little you could extract
 
+CLASSIFICATION-TO-ARRAY MAPPING (MANDATORY):
+- Items classified as STRONG_MATCH go into the "strong_matches" array — regardless of whether they are required or preferred qualifications
+- Items classified as PARTIAL_MATCH go into the "partial_matches" array
+- Items classified as GAP go into the "gaps" array
+- Do NOT put STRONG_MATCH items into partial_matches or gaps
+- The deciding factor is the CLASSIFICATION, not whether the qualification is required or preferred
+- If a preferred qualification is a STRONG_MATCH (candidate fully has it), it goes in strong_matches
+- Example: JD prefers "MBA" + candidate has MBA = STRONG_MATCH → goes in strong_matches array, NOT partial_matches
+
+ONLY RETURN THE JSON OUTPUT
+
 Return ONLY a valid JSON object matching this schema exactly:
 ${schemaText}`;
 }

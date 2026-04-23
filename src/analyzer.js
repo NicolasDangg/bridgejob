@@ -79,6 +79,8 @@ export async function analyzeSkills(jd, skills, fetchImpl, options = {}) {
   const data = await response.json();
   const raw = data?.choices?.[0]?.message?.content;
 
+  console.log(raw)
+
   if (typeof raw !== 'string' || raw.trim() === '') {
     throw createDomainError('ANALYZE_INVALID_RESPONSE', 'Groq returned an unexpected response format.');
   }

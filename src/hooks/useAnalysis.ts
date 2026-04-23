@@ -19,6 +19,7 @@ export type FitResponse = {
   overall_summary: string;
   strong_matches: MatchItem[];
   partial_matches: MatchItem[];
+  gaps: MatchItem[];
   noise_skills: string[];
   readiness_score: number;
   bridge_steps: string[];
@@ -64,6 +65,33 @@ export interface Analysis {
 // --- Mapper ---
 
 function mapFitResponseToAnalysis(id: string, date: string, response: FitResponse): Analysis {
+  // Map partial_matches (partial gaps with gap_detail and learnability info)
+  const partialGaps = response.partial_matches.map(m => ({
+    name: m.skill,
+    priority: (m.priority?.toLowerCase() as any) || 'moderate',
+    recommendation: m.gap_detail || 'No specific recommendation provided.',
+    action: m.action,
+    timeToProficiency: m.learnability === 'FAST' ? '1-2 weeks' : m.learnability === 'SLOW' ? '2-3 months' : '4-6 weeks',
+    resources: [
+      { title: 'Search for courses on ' + m.skill, url: 'https://www.google.com/search?q=learn+' + encodeURIComponent(m.skill) }
+    ]
+  }));
+
+  // Map true gaps (complete missing skills, no gap_detail field typically)
+  const trueGaps = response.gaps.map(g => ({
+    name: g.skill,
+    priority: (g.priority?.toLowerCase() as any) || 'critical',
+    recommendation: 'This is a critical missing skill. ' + (g.gap_detail || 'No specific recommendation provided.'),
+    action: g.action,
+    timeToProficiency: g.learnability === 'FAST' ? '1-2 weeks' : g.learnability === 'SLOW' ? '2-3 months' : '4-6 weeks',
+    resources: [
+      { title: 'Search for courses on ' + g.skill, url: 'https://www.google.com/search?q=learn+' + encodeURIComponent(g.skill) }
+    ]
+  }));
+
+  // Combine: true gaps first (more critical), then partial gaps
+  const allGaps = [...trueGaps, ...partialGaps];
+
   return {
     analysisId: id,
     jobTitle: response.job_title,
@@ -76,16 +104,7 @@ function mapFitResponseToAnalysis(id: string, date: string, response: FitRespons
       score: 100, // Matches are considered 100% ready for that skill
       category: 'Match'
     })),
-    gaps: response.partial_matches.map(m => ({
-      name: m.skill,
-      priority: (m.priority?.toLowerCase() as any) || 'moderate',
-      recommendation: m.gap_detail || 'No specific recommendation provided.',
-      action: m.action,
-      timeToProficiency: m.learnability === 'FAST' ? '1-2 weeks' : m.learnability === 'SLOW' ? '2-3 months' : '4-6 weeks',
-      resources: [
-        { title: 'Search for courses on ' + m.skill, url: 'https://www.google.com/search?q=learn+' + encodeURIComponent(m.skill) }
-      ]
-    }))
+    gaps: allGaps
   };
 }
 
