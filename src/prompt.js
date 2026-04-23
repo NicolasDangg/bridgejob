@@ -83,6 +83,22 @@ DOMAIN-SPECIFIC PRIORITIZATION:
 - If the JD is for a specialized domain (e.g., construction, healthcare, legal, finance), prioritize domain-specific terminology and requirements over generic business keywords
 - Only use the reference keyword map as a fallback when the JD uses ambiguous or generic language
 
+STRICT MATCH-BEFORE-GAP RULE:
+Before classifying ANY qualification, answer this binary question first:
+"Does the candidate's profile contain direct evidence of this qualification? Yes or No."
+
+If YES → classify as STRONG_MATCH or PARTIAL_MATCH. Do NOT classify as a gap.
+You may NOT classify something as a gap AND acknowledge the candidate has it.
+"Has X but could benefit from more" is a MATCH, not a gap.
+"Has X but lacks depth" is a PARTIAL_MATCH, not a gap.
+
+A gap means: the candidate has NO evidence of this qualification whatsoever.
+
+SELF-CHECK: After writing each gap analysis, re-read your own text.
+If your gap analysis contains phrases like "already has," "has experience with,"
+"has demonstrated," or "has worked on" → you just proved it's NOT a gap.
+Reclassify immediately as STRONG_MATCH or PARTIAL_MATCH.
+
 Reference keyword map for common industry phrasing and adjacent concepts. Use these as semantic references, not as a strict checklist:
 - Stakeholder Management
 - Risk Mitigation
