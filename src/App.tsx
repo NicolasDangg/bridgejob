@@ -214,8 +214,8 @@ function Hero() {
   const y2 = useTransform(scrollY, [0, 500], [0, -150]);
   const rotate = useTransform(scrollY, [0, 1000], [0, 45]);
 
-  const scrollToSample = () => {
-    const element = document.getElementById('sample-result');
+  const scrollToLiveDemo = () => {
+    const element = document.getElementById('live-demo');
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
@@ -263,10 +263,10 @@ function Hero() {
             </Link>
           </div>
           <button
-            onClick={scrollToSample}
+            onClick={scrollToLiveDemo}
             className="group flex flex-col items-center gap-2 text-[10px] text-slate-400 hover:text-slate-900 font-bold uppercase tracking-[0.2em] transition-all"
           >
-            Look at a sample result
+            See how it works
             <motion.div
               animate={{ y: [0, 4, 0] }}
               transition={{ repeat: Infinity, duration: 2 }}
@@ -315,7 +315,7 @@ function LiveDemo() {
   };
 
   return (
-    <section className="py-24 px-4 bg-slate-50 border-y border-border-subtle">
+    <section id="live-demo" className="py-24 px-4 bg-slate-50 border-y border-border-subtle">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
