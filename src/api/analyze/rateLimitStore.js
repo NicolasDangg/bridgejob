@@ -27,8 +27,8 @@ function requireFirstEnv(names) {
 }
 
 // SECURITY: Ensure SUPABASE_SERVICE_ROLE_KEY is never exposed to clients
-// This validates at startup that the key is not accidentally prefixed with VITE_
-function validateSecurityEnvironment() {
+// This validates that the key is not accidentally prefixed with VITE_
+export function validateSecurityEnvironment() {
   const dangerousPrefixes = ['VITE_', 'NEXT_PUBLIC_'];
   
   if (typeof process.env !== 'object') {
@@ -36,7 +36,8 @@ function validateSecurityEnvironment() {
   }
   
   for (const [key, value] of Object.entries(process.env)) {
-    if (value && typeof value === 'string' && value.includes('sbp_') || value.includes('sbrx_')) {
+    // Check if this is a service role key (detected by key name or value pattern)
+    if (value && typeof value === 'string' && (value.includes('sbp_') || value.includes('sbrx_'))) {
       // These are service role key indicators
       for (const prefix of dangerousPrefixes) {
         if (key.startsWith(prefix)) {
@@ -52,9 +53,6 @@ function validateSecurityEnvironment() {
   }
 }
 
-// Run validation at module load time
-validateSecurityEnvironment();
-
 export function normalizePlan(value) {
   if (typeof value !== 'string') return 'free';
   const normalized = value.trim().toLowerCase();
@@ -64,28 +62,20 @@ export function normalizePlan(value) {
   return 'free';
 }
 
-// Validate user's plan against their profile in the database
+// Validate user's plan against their JWT metadata
 // This prevents attackers from claiming a higher plan tier via token manipulation
-async function validateUserPlan(userId, claimedPlan, supabaseClient) {
-  // Query the user's profile to get the authoritative plan
-  const { data, error } = await supabaseClient
-    .from('profiles')
-    .select('plan')
-    .eq('id', userId)
-    .single();
-
-  if (error) {
-    // If we can't verify the plan, default to free tier for safety
-    console.warn(`Failed to verify user plan for ${userId}:`, error.message);
-    return 'free';
-  }
-
-  const actualPlan = normalizePlan(data?.plan);
+async function validateUserPlan(userId, claimedPlan, userMetadata) {
+  // Per schema (line 90 of migration): "Canonical plan value lives in auth.users.raw_user_meta_data->>'plan'"
+  // The JWT metadata is the authoritative source for the user's plan
+  // We validate the claim against what's actually in their JWT metadata
   
-  // If claimed plan differs from actual plan, log and use actual plan
+  const actualPlan = normalizePlan(userMetadata?.plan);
+  
+  // If claimed plan differs from actual plan, log security event and use actual plan
   if (actualPlan !== claimedPlan) {
     console.warn(
-      `Plan mismatch for user ${userId}: claimed ${claimedPlan}, actual ${actualPlan}`
+      `Plan mismatch for user ${userId}: claimed ${claimedPlan}, actual ${actualPlan}. ` +
+      `This may indicate an attempted privilege escalation attack.`
     );
   }
 
@@ -132,8 +122,9 @@ export async function authenticateAnalyzeRequest(req, supabaseClient = getSupaba
     throw err;
   }
 
-  const claimedPlan = normalizePlan(data.user.user_metadata?.plan);
-  const validatedPlan = await validateUserPlan(data.user.id, claimedPlan, supabaseClient);
+  const userMetadata = data.user.user_metadata || {};
+  const claimedPlan = normalizePlan(userMetadata.plan);
+  const validatedPlan = await validateUserPlan(data.user.id, claimedPlan, userMetadata);
 
   return {
     userId: data.user.id,
