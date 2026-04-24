@@ -26,6 +26,35 @@ function requireFirstEnv(names) {
   throw err;
 }
 
+// SECURITY: Ensure SUPABASE_SERVICE_ROLE_KEY is never exposed to clients
+// This validates at startup that the key is not accidentally prefixed with VITE_
+function validateSecurityEnvironment() {
+  const dangerousPrefixes = ['VITE_', 'NEXT_PUBLIC_'];
+  
+  if (typeof process.env !== 'object') {
+    return; // Not in Node.js environment, skip check
+  }
+  
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value && typeof value === 'string' && value.includes('sbp_') || value.includes('sbrx_')) {
+      // These are service role key indicators
+      for (const prefix of dangerousPrefixes) {
+        if (key.startsWith(prefix)) {
+          const err = new Error(
+            `SECURITY VIOLATION: Service role key detected with "${prefix}" prefix. ` +
+            `This would expose the key to clients. Use "${key.replace(prefix, '')}" instead.`
+          );
+          err.code = 'SECURITY_VALIDATION_FAILED';
+          throw err;
+        }
+      }
+    }
+  }
+}
+
+// Run validation at module load time
+validateSecurityEnvironment();
+
 export function normalizePlan(value) {
   if (typeof value !== 'string') return 'free';
   const normalized = value.trim().toLowerCase();
@@ -33,6 +62,34 @@ export function normalizePlan(value) {
     return normalized;
   }
   return 'free';
+}
+
+// Validate user's plan against their profile in the database
+// This prevents attackers from claiming a higher plan tier via token manipulation
+async function validateUserPlan(userId, claimedPlan, supabaseClient) {
+  // Query the user's profile to get the authoritative plan
+  const { data, error } = await supabaseClient
+    .from('profiles')
+    .select('plan')
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    // If we can't verify the plan, default to free tier for safety
+    console.warn(`Failed to verify user plan for ${userId}:`, error.message);
+    return 'free';
+  }
+
+  const actualPlan = normalizePlan(data?.plan);
+  
+  // If claimed plan differs from actual plan, log and use actual plan
+  if (actualPlan !== claimedPlan) {
+    console.warn(
+      `Plan mismatch for user ${userId}: claimed ${claimedPlan}, actual ${actualPlan}`
+    );
+  }
+
+  return actualPlan;
 }
 
 function parseAuthorizationHeader(req) {
@@ -75,9 +132,12 @@ export async function authenticateAnalyzeRequest(req, supabaseClient = getSupaba
     throw err;
   }
 
+  const claimedPlan = normalizePlan(data.user.user_metadata?.plan);
+  const validatedPlan = await validateUserPlan(data.user.id, claimedPlan, supabaseClient);
+
   return {
     userId: data.user.id,
-    plan: normalizePlan(data.user.user_metadata?.plan),
+    plan: validatedPlan,
   };
 }
 
