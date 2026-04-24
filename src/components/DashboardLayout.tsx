@@ -22,10 +22,12 @@ import {
   Briefcase,
   BookOpen,
   Receipt,
-  Gift
+  Gift,
+  FileText
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../lib/AuthContext';
+import { FloatingChatBox } from './FloatingChatBox';
 
 // --- Constants ---
 
@@ -40,6 +42,7 @@ export const SERVICES_NAV = [
   { label: 'Job Search', icon: Briefcase },
   { label: 'Skill Learning', icon: BookOpen },
   { label: 'Resume Review', icon: Receipt },
+  { label: 'Resume Creator', icon: FileText },
 ];
 
 // --- Sub-components ---
@@ -88,10 +91,21 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children, activeLabel, onTabChange, headerContent }: DashboardLayoutProps) {
-  const { user } = useAuth();
+  const { user, userPlan } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  const isPro = userPlan.toLowerCase().includes('pro') || userPlan.toLowerCase().includes('enterprise');
+
+  const handleCoachClick = () => {
+    if (!isPro) {
+      alert('AI Career Coach is a Pro feature. Please upgrade your plan to access this feature.');
+      return;
+    }
+    setIsChatOpen(true);
+  };
 
   const handleSidebarClick = (label: string) => {
     // If it's an internal Dashboard tab and we are on the Dashboard
@@ -123,6 +137,9 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
         break;
       case 'Resume Review':
         navigate('/resume-review');
+        break;
+      case 'Resume Creator':
+        navigate('/resume-creator');
         break;
       default:
         break;
@@ -226,14 +243,20 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
 
           <button
             title="AI Career Coach"
-            onClick={() => alert('AI Career Coach is currently in beta and will be available soon.')}
+            onClick={handleCoachClick}
             className={cn(
               "w-full flex items-center justify-center gap-2 py-3 px-4 rounded-md border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm overflow-hidden",
-              isCollapsed && "p-0 h-10"
+              isCollapsed && "p-0 h-10",
+              !isPro && "opacity-80"
             )}
           >
-            <Sparkles size={16} className="text-blue-500 shrink-0" />
-            {!isCollapsed && <span>AI Career Coach</span>}
+            <Sparkles size={16} className={cn("shrink-0", isPro ? "text-blue-500" : "text-gray-400")} />
+            {!isCollapsed && (
+              <span className="flex items-center gap-2">
+                AI Career Coach
+                {!isPro && <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text text-[10px] font-bold uppercase tracking-widest bg-blue-50 px-1.5 py-0.5 rounded-sm border border-blue-100">PRO</span>}
+              </span>
+            )}
           </button>
 
           <button
@@ -267,6 +290,8 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
           </motion.div>
         </div>
       </main>
+
+      <FloatingChatBox isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 }

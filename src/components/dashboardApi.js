@@ -26,6 +26,23 @@ export function buildAnalyzeEndpoint(baseUrl) {
   return normalized + '/api/analyze';
 }
 
+export function buildCoachEndpoint(baseUrl) {
+  const normalized = normalizeBaseUrl(baseUrl);
+  if (!normalized) {
+    return '/api/coach';
+  }
+
+  if (normalized.endsWith('/api/coach')) {
+    return normalized;
+  }
+
+  if (normalized.endsWith('/api')) {
+    return normalized + '/coach';
+  }
+
+  return normalized + '/api/coach';
+}
+
 async function requestOnce(fetchFn, endpoint, input, authToken) {
   let response;
   const headers = { 'Content-Type': 'application/json' };
@@ -54,6 +71,22 @@ async function requestOnce(fetchFn, endpoint, input, authToken) {
 }
 
 export async function requestDashboardAnalysis(fetchFn, endpoint, input, fallbackEndpoint, authToken) {
+  try {
+    return await requestOnce(fetchFn, endpoint, input, authToken);
+  } catch (err) {
+    const shouldRetryWithFallback =
+      Boolean(fallbackEndpoint) &&
+      fallbackEndpoint !== endpoint;
+
+    if (shouldRetryWithFallback) {
+      return requestOnce(fetchFn, fallbackEndpoint, input, authToken);
+    }
+
+    throw err;
+  }
+}
+
+export async function requestCoachChat(fetchFn, endpoint, input, fallbackEndpoint, authToken) {
   try {
     return await requestOnce(fetchFn, endpoint, input, authToken);
   } catch (err) {

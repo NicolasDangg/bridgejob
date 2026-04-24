@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -448,8 +448,20 @@ const ReadinessScoreChart = ({ data }: { data: any[] }) => (
 export default function Dashboard() {
   const { user, session, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('Overview');
+  const location = useLocation();
   const [jdText, setJdText] = useState('');
   const [candidateText, setCandidateText] = useState('');
+  
+  // Handle prefilled data from Resume Creator
+  useEffect(() => {
+    const state = location.state as { prefilledCandidate?: string } | null;
+    if (state?.prefilledCandidate) {
+      setCandidateText(state.prefilledCandidate);
+      setActiveTab('Overview');
+      // Clear state to prevent re-fill on refresh if desirable, 
+      // but usually state persists only for this navigation.
+    }
+  }, [location.state]);
   const [response, setResponse] = useState<FitResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);

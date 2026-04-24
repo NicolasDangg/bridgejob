@@ -19,6 +19,7 @@ import CareerPath from "./components/CareerPath";
 import JobSearch from "./components/JobSearch";
 import SkillLearning from "./components/SkillLearning";
 import ResumeReview from "./components/ResumeReview";
+import ResumeCreator from "./components/ResumeCreator";
 import { FeaturesShowcase } from "./components/FeaturesShowcase";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
 
@@ -431,6 +432,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <ResumeReview />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/resume-creator"
+              element={
+                <ProtectedRoute>
+                  <ResumeCreator />
                 </ProtectedRoute>
               }
             />
