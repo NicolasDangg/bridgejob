@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { buildAuthRedirectUrl, supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
+import { Button } from '@/src/components/ui/button';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -149,16 +150,14 @@ export default function Signup() {
 
             {error && <p className="text-[11px] text-red-600 font-medium animate-in slide-in-from-top-1 duration-200">{error}</p>}
 
-            <button
+            <Button
               type="submit"
               disabled={loading}
-              className="w-full enterprise-button h-10 mt-2 flex items-center justify-center"
+              loading={loading}
+              className="w-full enterprise-button h-10 mt-2"
             >
-              {loading 
-                ? (password.trim() ? 'Creating Account...' : 'Sending Link...') 
-                : (password.trim() ? 'Sign Up' : 'Create Magic Link')
-              }
-            </button>
+              {password.trim() ? 'Sign Up' : 'Create Magic Link'}
+            </Button>
           </form>
         </div>
 

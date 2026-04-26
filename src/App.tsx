@@ -21,6 +21,10 @@ import SkillLearning from "./components/SkillLearning";
 import ResumeReview from "./components/ResumeReview";
 import ResumeCreator from "./components/ResumeCreator";
 import { FeaturesShowcase } from "./components/FeaturesShowcase";
+import { FooterBlock } from "./components/uitripled/footer-block-shadcnui";
+import { TestimonialsBlock } from "./components/uitripled/testimonials-block-shadcnui";
+import { NativeTypewriter } from "./components/uitripled/native-typewriter-shadcnui";
+import { AnimatedProfileMenu } from "./components/uitripled/animated-profile-menu-shadcnui";
 import { AuthProvider, useAuth } from "./lib/AuthContext";
 
 function ScrollToTop() {
@@ -155,24 +159,8 @@ function PageLayout({ children }: { children: ReactNode }) {
 
             <div className="flex items-center gap-4">
               {user ? (
-                <div className="flex items-center gap-3 pl-4 border-l border-border-subtle">
-                  <div className="flex flex-col items-end hidden sm:flex">
-                    <span className="text-[11px] font-semibold text-slate-900">{user.email?.split('@')[0]}</span>
-                    <span className="text-[10px] text-slate-500">{userPlan}</span>
-                  </div>
-                  <Link
-                    to="/accounts"
-                    className="w-8 h-8 rounded-full bg-slate-50 border border-border-subtle flex items-center justify-center hover:bg-slate-100 transition-colors"
-                  >
-                    <UserIcon className="w-4 h-4 text-slate-600" />
-                  </Link>
-                  <button
-                    onClick={signOut}
-                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                    title="Sign out"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
+                <div className="pl-4 border-l border-border-subtle">
+                  <AnimatedProfileMenu user={user} userPlan={userPlan} signOut={signOut} />
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
@@ -193,18 +181,7 @@ function PageLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      {!isDashboardView && (
-        <footer className="bg-white border-t border-border-subtle py-8">
-          <div className="container mx-auto max-w-7xl px-4 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-xs text-slate-500">© 2026 gapless Career Intelligence. All rights reserved.</p>
-            <div className="flex gap-6 text-xs text-slate-400">
-              <Link to="/privacy" className="hover:text-slate-600 transition-colors">Privacy Policy</Link>
-              <Link to="/terms" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
-              <Link to="/contact" className="hover:text-slate-600 transition-colors">Support</Link>
-            </div>
-          </div>
-        </footer>
-      )}
+      {!isDashboardView && <FooterBlock />}
     </div>
   );
 }
@@ -247,7 +224,13 @@ function Hero() {
         </motion.div>
 
         <motion.h1 variants={itemVariants} className="text-5xl font-bold tracking-tight text-slate-900 sm:text-7xl lg:text-8xl">
-          <span className="relative isolate inline-block px-4 py-1 mx-1"><span className="absolute inset-0 bg-amber-200/60 -rotate-1 rounded-sm -z-10"></span>Close the gap</span> <br className="hidden md:block" /> between you and <br className="hidden md:block" /> your dream job.
+          <span className="relative isolate inline-block px-4 py-1 mx-1"><span className="absolute inset-0 bg-amber-200/60 -rotate-1 rounded-sm -z-10"></span>Close the gap</span> <br className="hidden md:block" /> between you and <br className="hidden md:block" />
+          <NativeTypewriter
+            content={["your dream job.", "your next role.", "your future."]}
+            speed="medium"
+            loop
+            className="text-slate-900"
+          />
         </motion.h1>
 
         <motion.p variants={itemVariants} className="text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto">
@@ -380,6 +363,11 @@ function LandingPage() {
       <Hero />
       <LiveDemo />
       <FeaturesShowcase />
+      <section className="py-24 px-4 bg-slate-50 border-y border-border-subtle overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <TestimonialsBlock />
+        </div>
+      </section>
       <div id="sample-result" />
       <SampleResult />
     </>
@@ -488,4 +476,3 @@ export default function App() {
     </Router>
   );
 }
-

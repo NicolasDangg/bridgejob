@@ -21,6 +21,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { cn } from '../lib/utils';
 import DashboardLayout from './DashboardLayout';
+import { ProfessionalResume } from './uitripled/professional-resume-shadcnui';
 
 // --- Utils ---
 
@@ -125,121 +126,6 @@ const InputField = ({ label, value, onChange, placeholder, type = "text", multil
         placeholder={placeholder}
       />
     )}
-  </div>
-);
-
-// --- Resume Preview Component ---
-
-const ResumeLivePreview = ({ data }: { data: ResumeData }) => (
-  <div className="bg-white min-h-[1100px] shadow-2xl p-12 font-sans text-gray-900 break-words overflow-x-hidden border border-gray-100">
-    {/* Header */}
-    <div className="mb-10 text-left border-b-2 border-black pb-6">
-      <h1 className="text-4xl font-extrabold uppercase tracking-tight mb-3 text-black">{data.personalInfo.fullName || 'FULL NAME'}</h1>
-      <div className="flex flex-wrap items-center gap-x-4 text-[11px] font-medium text-gray-600">
-        {data.personalInfo.location && <span className="flex items-center gap-1">{data.personalInfo.location}</span>}
-        {data.personalInfo.phone && <span className="flex items-center gap-1">| {data.personalInfo.phone}</span>}
-        {data.personalInfo.email && <span className="flex items-center gap-1 text-blue-600 font-bold underline decoration-blue-200 underline-offset-4">| {data.personalInfo.email}</span>}
-      </div>
-      <div className="flex flex-wrap items-center gap-x-4 mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-        {data.personalInfo.linkedin && <span>LinkedIn: {data.personalInfo.linkedin}</span>}
-        {data.personalInfo.website && <span>| Portfolio: {data.personalInfo.website}</span>}
-      </div>
-    </div>
-
-    {/* Section Generator Helper */}
-    <div className="space-y-8">
-      {/* Summary */}
-      {data.personalInfo.summary && (
-        <section>
-          <h2 className="text-xs font-black uppercase tracking-[0.2em] border-b border-gray-200 pb-1 mb-4 text-gray-900">Professional Summary</h2>
-          <p className="text-[13.5px] leading-relaxed text-gray-700 font-medium">{data.personalInfo.summary}</p>
-        </section>
-      )}
-
-      {/* Experience */}
-      {data.experiences.length > 0 && (
-        <section>
-          <h2 className="text-xs font-black uppercase tracking-[0.2em] border-b border-gray-200 pb-1 mb-6 text-gray-900">Professional Experience</h2>
-          <div className="space-y-7">
-            {data.experiences.map(exp => (
-              <div key={exp.id}>
-                <div className="flex justify-between items-end mb-1">
-                  <h3 className="text-[15px] font-bold text-black tracking-tight">{exp.company}</h3>
-                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-tighter bg-gray-50 px-2 py-0.5 rounded">{exp.startDate} – {exp.current ? 'Present' : exp.endDate}</span>
-                </div>
-                <div className="flex justify-between items-baseline mb-3">
-                  <span className="text-[13px] font-bold text-blue-600 italic underline underline-offset-4 decoration-blue-100">{exp.role}</span>
-                  <span className="text-[11px] font-semibold text-gray-400 italic uppercase">{exp.location}</span>
-                </div>
-                <ul className="list-disc ml-5 space-y-2">
-                  {exp.description.split('\n').filter(line => line.trim()).map((bullet, i) => (
-                    <li key={i} className="text-[13px] leading-relaxed text-gray-700 pl-1">{bullet.trim().startsWith('•') ? bullet.trim().substring(1).trim() : bullet.trim()}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Projects */}
-      {data.projects.length > 0 && (
-        <section>
-          <h2 className="text-xs font-black uppercase tracking-[0.2em] border-b border-gray-200 pb-1 mb-6 text-gray-900">Key Projects</h2>
-          <div className="space-y-7">
-            {data.projects.map(proj => (
-              <div key={proj.id}>
-                <div className="flex justify-between items-end mb-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-[15px] font-bold text-black tracking-tight">{proj.name}</h3>
-                    {proj.link && <span className="text-[10px] text-blue-500 font-bold bg-blue-50 px-2 py-0.5 rounded-full lowercase">{proj.link.replace(/^https?:\/\//, '')}</span>}
-                  </div>
-                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-tighter bg-gray-50 px-2 py-0.5 rounded">{proj.date}</span>
-                </div>
-                <div className="text-[11px] font-bold text-gray-500 mb-3 ml-0.5 uppercase tracking-widest">{proj.role}</div>
-                <ul className="list-disc ml-5 space-y-2">
-                  {proj.description.split('\n').filter(line => line.trim()).map((bullet, i) => (
-                    <li key={i} className="text-[13px] leading-relaxed text-gray-700 pl-1">{bullet.trim().startsWith('•') ? bullet.trim().substring(1).trim() : bullet.trim()}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Education */}
-      {data.education.length > 0 && (
-        <section>
-          <h2 className="text-xs font-black uppercase tracking-[0.2em] border-b border-gray-200 pb-1 mb-5 text-gray-900">Education</h2>
-          <div className="space-y-4">
-            {data.education.map(edu => (
-              <div key={edu.id} className="flex justify-between items-start">
-                <div className="space-y-0.5">
-                  <h3 className="text-[15px] font-bold text-black tracking-tight">{edu.school}</h3>
-                  <p className="text-[13px] font-semibold text-gray-600 italic tracking-wide">{edu.degree}</p>
-                </div>
-                <span className="text-[11px] font-bold text-gray-500 uppercase pt-1 bg-gray-50 px-2 py-0.5 rounded">{edu.gradDate}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Skills */}
-      {data.skills.length > 0 && (
-        <section>
-          <h2 className="text-xs font-black uppercase tracking-[0.2em] border-b border-gray-200 pb-1 mb-4 text-gray-900">Technical Skills & Expertise</h2>
-          <div className="flex flex-wrap gap-x-3 gap-y-2">
-            {data.skills.map((skill, i) => (
-              <React.Fragment key={skill}>
-                <span className="text-[13px] font-bold text-gray-700 bg-gray-50 px-3 py-1 rounded-md border border-gray-100">{skill}</span>
-              </React.Fragment>
-            ))}
-          </div>
-        </section>
-      )}
-    </div>
   </div>
 );
 
@@ -813,7 +699,7 @@ ${data.projects.map(p => `${p.name} (${p.role}): ${p.description}`).join('\n\n')
             {/* Live Preview Pane */}
             {showPreview && (
               <div className="hidden lg:block sticky top-32 h-[calc(100vh-160px)] overflow-y-auto pr-2 custom-scrollbar">
-                <ResumeLivePreview data={data} />
+                <ProfessionalResume data={data} />
               </div>
             )}
           </div>

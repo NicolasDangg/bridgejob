@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Sparkles, Loader2, Minus } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { cn } from '../lib/utils';
-import { buildCoachEndpoint, requestCoachChat } from './dashboardApi';
+import { buildCoachEndpoint, requestCoachChat } from './dashboardApi.js';
 
 interface Message {
   role: 'user' | 'assistant';

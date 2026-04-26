@@ -27,6 +27,9 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../lib/AuthContext';
+import { Button } from '@/src/components/ui/button';
+import { NativeButton } from './uitripled/native-button-shadcnui';
+import { AnimatedProfileMenu } from './uitripled/animated-profile-menu-shadcnui';
 import { FloatingChatBox } from './FloatingChatBox';
 
 // --- Constants ---
@@ -48,37 +51,41 @@ export const SERVICES_NAV = [
 // --- Sub-components ---
 
 export const IconButton = ({ icon: Icon, className, ...props }: any) => (
-  <button
+  <NativeButton
+    variant="ghost"
+    size="icon"
     className={cn(
-      "w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition-colors",
+      "h-11 w-11 rounded-xl flex items-center justify-center transition-all",
       className
     )}
     {...props}
   >
-    <Icon size={18} />
-  </button>
+    <Icon size={20} />
+  </NativeButton>
 );
 
 export const SidebarItem = ({ icon: Icon, label, active, badge, onClick, isCollapsed }: any) => (
-  <button
+  <NativeButton
+    variant={active ? "default" : "ghost"}
     onClick={onClick}
     title={isCollapsed ? label : undefined}
     className={cn(
-      "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all group",
+      "w-full flex items-center justify-start gap-6 px-4 py-4 rounded-2xl text-sm font-bold transition-all group",
       active
-        ? "bg-gray-200 text-gray-900"
-        : "text-gray-500 hover:bg-gray-100 hover:text-gray-900",
-      isCollapsed && "justify-center px-0"
+        ? "shadow-lg shadow-slate-200"
+        : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-900",
+      isCollapsed && "justify-center px-0 h-14"
     )}
+    shimmer={active}
   >
-    <Icon size={18} className={cn("transition-colors shrink-0", active ? "text-gray-900" : "text-gray-400 group-hover:text-gray-900")} />
+    <Icon size={22} className={cn("transition-colors shrink-0", active ? "text-white" : "text-slate-400 group-hover:text-slate-900")} />
     {!isCollapsed && <span className="truncate">{label}</span>}
     {!isCollapsed && badge && (
-      <span className="ml-auto bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+      <span className="ml-auto bg-blue-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black">
         {badge}
       </span>
     )}
-  </button>
+  </NativeButton>
 );
 
 // --- Layout Component ---
@@ -91,7 +98,7 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children, activeLabel, onTabChange, headerContent }: DashboardLayoutProps) {
-  const { user, userPlan } = useAuth();
+  const { user, userPlan, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -197,67 +204,54 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
         </div>
 
         <div className="mt-auto p-4 space-y-4 border-t border-gray-100 bg-white">
-          <div className={cn("flex items-center justify-between", isCollapsed ? "flex-col gap-4" : "px-2")}>
-            <Link to="/accounts" className="flex items-center gap-3 overflow-hidden hover:opacity-80 transition-opacity">
-              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-[10px] font-bold border border-white shadow-sm uppercase shrink-0">
-                {user?.email?.substring(0, 2) || 'g'}
-              </div>
-              {!isCollapsed && (
-                <div className="flex flex-col overflow-hidden text-left">
-                  <span className="text-xs font-bold text-gray-900 truncate">{user?.email?.split('@')[0] || 'User'}</span>
-                  <span className="text-[10px] text-gray-400">Personal Account</span>
-                </div>
-              )}
-            </Link>
-            {!isCollapsed && <IconButton icon={Settings} onClick={() => navigate('/accounts')} />}
-          </div>
+          <AnimatedProfileMenu user={user} userPlan={userPlan} signOut={signOut} isCollapsed={isCollapsed} />
 
           {!isCollapsed && (
-            <div className="flex items-center justify-between gap-1 px-1">
+            <div className="grid grid-cols-4 gap-2 px-2">
               <IconButton 
                 icon={Plus} 
-                className="bg-gray-100 hover:bg-gray-200 flex-1" 
+                className="bg-gray-100 hover:bg-gray-200" 
                 title="New Analysis"
                 onClick={() => { navigate('/dashboard'); }} 
               />
               <IconButton 
                 icon={Gift} 
-                className="bg-blue-50 text-blue-600 hover:bg-blue-100 flex-1" 
+                className="bg-blue-50 text-blue-600 hover:bg-blue-100" 
                 title="Referrals"
                 onClick={() => alert('Referral program coming soon!')}
               />
               <IconButton 
                 icon={HelpCircle} 
-                className="flex-1" 
                 title="Support"
                 onClick={() => navigate('/contact')}
               />
               <IconButton 
                 icon={MoreHorizontal} 
-                className="flex-1" 
                 title="Settings"
                 onClick={() => navigate('/accounts')}
               />
             </div>
           )}
 
-          <button
-            title="AI Career Coach"
+          <NativeButton
             onClick={handleCoachClick}
+            variant="outline"
             className={cn(
-              "w-full flex items-center justify-center gap-2 py-3 px-4 rounded-md border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm overflow-hidden",
-              isCollapsed && "p-0 h-10",
+              "w-full flex items-center justify-center gap-4 py-6 px-4 rounded-2xl text-sm font-bold shadow-sm overflow-hidden h-auto",
+              isCollapsed && "p-0 h-14 w-14 mx-auto",
               !isPro && "opacity-80"
             )}
+            title="AI Career Coach"
+            shimmer={isPro}
           >
-            <Sparkles size={16} className={cn("shrink-0", isPro ? "text-blue-500" : "text-gray-400")} />
+            <Sparkles size={20} className={cn("shrink-0", isPro ? "text-blue-500" : "text-gray-400")} />
             {!isCollapsed && (
               <span className="flex items-center gap-2">
                 AI Career Coach
-                {!isPro && <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text text-[10px] font-bold uppercase tracking-widest bg-blue-50 px-1.5 py-0.5 rounded-sm border border-blue-100">PRO</span>}
+                {!isPro && <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text text-[10px] font-black uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">PRO</span>}
               </span>
             )}
-          </button>
+          </NativeButton>
 
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
@@ -272,7 +266,7 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
       <main className="flex-1 overflow-y-auto flex flex-col h-screen">
         <div className="flex-1">
           <motion.div
-            key={location.pathname + (activeLabel || '')}
+            key={location.pathname} // Only re-animate on actual route changes, not tab changes
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
