@@ -95,18 +95,12 @@ const features = [
 
 export function FeatureComparisonBlock() {
   const { user, userPlan } = useAuth();
-  const [hoveredPlan, setHoveredPlan] = useState<number | null>(null);
   const currentPlans = plans(user, userPlan);
 
   return (
     <section className="w-full bg-background px-4 py-16">
       <div className="mx-auto max-w-7xl">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-12 text-center"
-        >
+        <div className="mb-12 text-center">
           <Badge className="mb-4" variant="secondary">
             <Zap className="mr-1 h-3 w-3" />
             Pricing & Tiers
@@ -117,225 +111,122 @@ export function FeatureComparisonBlock() {
           <p className="mx-auto max-w-2xl text-muted-foreground">
             Choose the subscription that matches your analysis volume.
           </p>
-        </motion.div>
+        </div>
 
         {/* Pricing Cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mb-12"
-        >
+        <div className="mb-12">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {currentPlans.map((plan, index) => {
               const Icon = plan.icon;
-              const isHovered = hoveredPlan === index;
 
               return (
-                <motion.div
+                <div
                   key={plan.name}
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: 0.1 * index, duration: 0.5 }}
-                  onHoverStart={() => setHoveredPlan(index)}
-                  onHoverEnd={() => setHoveredPlan(null)}
-                  className="relative"
+                  className="relative group"
                 >
-                  {plan.popular && (
-                    <motion.div
-                      className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-primary via-primary/50 to-primary opacity-20 blur-xl"
-                      animate={{
-                        opacity: [0.2, 0.4, 0.2],
-                        scale: [1, 1.02, 1],
-                      }}
-                      transition={{
-                        duration: 3,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }}
-                    />
-                  )}
-
                   <Card
-                    className={`group relative h-full overflow-hidden border-border/50 bg-gradient-to-br from-card via-card to-card/80 backdrop-blur-sm transition-all duration-500 ${
+                    className={`relative h-full overflow-hidden border transition-all duration-200 flex flex-col ${
                       plan.popular
-                        ? "border-primary/50 shadow-2xl shadow-primary/10"
-                        : "hover:border-primary/30 hover:shadow-xl"
-                    } ${isHovered && !plan.popular ? "scale-[1.02]" : ""} ${
-                      plan.popular ? "scale-[1.05] lg:scale-110" : ""
+                        ? "border-primary/50 bg-card shadow-md"
+                        : "border-border bg-card hover:border-primary/30 hover:shadow-md"
                     }`}
                   >
-                    <motion.div
-                      className={`absolute inset-0 bg-gradient-to-br ${plan.gradient} opacity-0 transition-opacity duration-500`}
-                      animate={isHovered ? { opacity: 1 } : { opacity: 0 }}
-                    />
-
-                    {isHovered && (
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
-                        animate={{ x: ["-200%", "200%"] }}
-                        transition={{
-                          duration: 1.5,
-                          repeat: Infinity,
-                          ease: "linear",
-                        }}
-                      />
-                    )}
-
+                    {/* Recommended badge */}
                     {plan.popular && (
-                      <motion.div
-                        initial={{ scale: 0, rotate: -180 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        transition={{
-                          delay: 0.3 + index * 0.1,
-                          type: "spring",
-                        }}
-                        className="absolute top-4 right-4 z-20"
-                      >
-                        <Badge className="gap-1 rounded-lg border-primary/20 bg-primary px-3 py-1 shadow-lg">
+                      <div className="absolute top-6 right-6 z-20">
+                        <Badge className="gap-1.5 rounded-full border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                           <Sparkles className="h-3 w-3" />
-                          Recommended
+                          Popular
                         </Badge>
-                      </motion.div>
+                      </div>
                     )}
 
-                    <div className="relative z-10 p-6 md:p-8 flex flex-col h-full">
-                      <motion.div
-                        className="mb-4 flex justify-center"
-                        whileHover={{ rotate: 360, scale: 1.1 }}
-                        transition={{ duration: 0.6 }}
-                      >
-                        <div
-                          className={`rounded-2xl bg-gradient-to-br ${plan.gradient} p-3 shadow-lg`}
-                        >
-                          <Icon className={`h-8 w-8 ${plan.iconColor}`} />
+                    <div className="relative z-10 p-8 flex flex-col h-full">
+                      {/* Icon */}
+                      <div className="mb-6 flex justify-start">
+                        <div className="rounded-lg bg-muted p-3">
+                          <Icon className={`h-6 w-6 ${plan.iconColor}`} />
                         </div>
-                      </motion.div>
+                      </div>
 
-                      <div className="mb-6 text-center">
-                        <h3 className="mb-2 text-2xl font-bold tracking-tight">
+                      {/* Plan name and description */}
+                      <div className="mb-8">
+                        <h3 className="mb-2 text-xl font-semibold tracking-tight">
                           {plan.name}
                         </h3>
-                        <p className="text-sm text-muted-foreground h-10">
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                           {plan.description}
                         </p>
                       </div>
 
-                      <div className="mb-6 text-center">
-                        <motion.div
-                          animate={isHovered ? { scale: 1.05 } : { scale: 1 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <span className="text-5xl font-bold tracking-tight">
+                      {/* Pricing */}
+                      <div className="mb-8">
+                        <div className="space-y-1">
+                          <span className="text-4xl font-bold tracking-tight">
                             {plan.price}
                           </span>
                           {plan.period && (
-                            <span className="ml-1 text-base text-muted-foreground">
+                            <div className="text-sm text-muted-foreground">
                               {plan.period}
-                            </span>
+                            </div>
                           )}
-                        </motion.div>
+                        </div>
                       </div>
 
-                      <motion.ul className="mb-8 space-y-3 flex-1">
-                        {plan.features.map((feature, idx) => (
-                          <motion.li
+                      {/* Features list */}
+                      <ul className="mb-8 space-y-3 flex-1">
+                        {plan.features.map((feature) => (
+                          <li
                             key={feature}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.4 + idx * 0.1 }}
-                            className="flex items-start gap-2"
+                            className="flex items-start gap-3"
                           >
-                            <motion.div
-                              whileHover={{ scale: 1.2, rotate: 360 }}
-                              transition={{ duration: 0.3 }}
-                            >
-                              <Check
-                                className={`mt-0.5 h-5 w-5 flex-shrink-0 ${plan.iconColor}`}
-                              />
-                            </motion.div>
-                            <span className="text-sm text-foreground/90">
+                            <div className="mt-1 flex-shrink-0">
+                              <Check className={`h-4 w-4 ${plan.iconColor}`} />
+                            </div>
+                            <span className="text-sm text-foreground/85">
                               {feature}
                             </span>
-                          </motion.li>
+                          </li>
                         ))}
-                      </motion.ul>
+                      </ul>
 
+                      {/* CTA Button */}
                       <Link
                         to={plan.path}
-                        className={`w-full ${plan.disabled ? 'pointer-events-none' : ''}`}
+                        className={`w-full ${plan.disabled ? "pointer-events-none" : ""}`}
                       >
                         <Button
-                          className={`group relative w-full overflow-hidden ${
-                            plan.popular ? "shadow-lg shadow-primary/20" : ""
-                          }`}
+                          className="w-full h-11 font-medium transition-colors duration-200"
                           variant={plan.popular ? "default" : "outline"}
                           size="lg"
                           disabled={plan.disabled}
                         >
-                          <motion.span
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                            animate={
-                              isHovered
-                                ? { x: ["-200%", "200%"] }
-                                : { x: "-200%" }
-                            }
-                            transition={{
-                              duration: 0.8,
-                              ease: "easeInOut",
-                            }}
-                          />
-                          <span className="relative">
-                            {plan.cta}
-                          </span>
-                          <motion.span
-                            className="relative ml-2"
-                            animate={isHovered ? { x: [0, 5, 0] } : { x: 0 }}
-                            transition={{
-                              duration: 0.5,
-                              repeat: isHovered ? Infinity : 0,
-                            }}
-                          >
-                            →
-                          </motion.span>
+                          {plan.cta}
                         </Button>
                       </Link>
                     </div>
                   </Card>
-                </motion.div>
+                </div>
               );
             })}
           </div>
-        </motion.div>
+        </div>
 
         {/* Feature Comparison Table */}
         <div className="overflow-x-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="min-w-[640px]"
-          >
+          <div className="min-w-[640px]">
             <div className="space-y-6">
-              {features.map((category, categoryIndex) => (
-                <motion.div
-                  key={category.category}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 * categoryIndex }}
-                >
-                  <h4 className="mb-4 text-lg font-semibold">
+              {features.map((category) => (
+                <div key={category.category}>
+                  <h4 className="mb-4 text-base font-semibold">
                     {category.category}
                   </h4>
                   <Card className="overflow-hidden border-border">
                     {category.items.map((feature, featureIndex) => (
-                      <motion.div
+                      <div
                         key={feature.name}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.05 * featureIndex }}
                         className={`grid grid-cols-4 gap-4 border-b border-border p-4 last:border-b-0 ${
-                          featureIndex % 2 === 0 ? "bg-muted/30" : ""
+                          featureIndex % 2 === 0 ? "bg-muted/20" : ""
                         }`}
                       >
                         <div className="col-span-1 flex items-center">
@@ -376,19 +267,14 @@ export function FeatureComparisonBlock() {
                             <X className="h-5 w-5 text-muted-foreground/30" />
                           )}
                         </div>
-                      </motion.div>
+                      </div>
                     ))}
                   </Card>
-                </motion.div>
+                </div>
               ))}
             </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8 }}
-              className="mt-12 text-center"
-            >
+            <div className="mt-12 text-center">
               <p className="mb-4 text-sm text-muted-foreground">
                 Need a custom plan?
               </p>
@@ -397,8 +283,8 @@ export function FeatureComparisonBlock() {
                   Contact Sales
                 </Button>
               </Link>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

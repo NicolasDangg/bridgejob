@@ -30,7 +30,7 @@ const footerLinks = [
   {
     title: "Company",
     links: [
-      { name: "About Us", path: "/contact" },
+      { name: "About Us", path: "/about" },
       { name: "Contact", path: "/contact" },
       { name: "Support", path: "/contact" },
     ],

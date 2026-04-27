@@ -5,6 +5,7 @@ import { User as UserIcon, LogOut, LayoutDashboard, CreditCard, Sparkles, Mail, 
 import Dashboard from "./components/Dashboard";
 import Pricing from "./components/Pricing";
 import Features from "./components/Features";
+import About from "./components/About";
 import Contact from "./components/Contact";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
@@ -433,6 +434,7 @@ export default function App() {
             />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/features" element={<Features />} />
+            <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
