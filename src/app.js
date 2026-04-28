@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import analyzeHandler from '../api/analyze.js';
+import coachHandler from './api/coach.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(__dirname, '..', 'dist');
@@ -21,6 +22,9 @@ app.use((req, res, next) => {
 // Use the Vercel serverless function for Express (both dev and production)
 app.post('/api/analyze', analyzeHandler);
 app.options('/api/analyze', analyzeHandler);
+
+app.post('/api/coach', coachHandler);
+app.options('/api/coach', coachHandler);
 
 app.use(express.static(distDir));
 

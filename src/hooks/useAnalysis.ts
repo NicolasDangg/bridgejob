@@ -130,8 +130,8 @@ export function useLatestAnalysis() {
 
         const { data: rows, error: err } = await supabase
           .from('analysis_history')
-          .select('id, analysisresult, created_at')
-          .eq('userid', user.id)
+          .select('id, analysis_result, created_at')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1);
 
@@ -139,7 +139,7 @@ export function useLatestAnalysis() {
 
         if (rows && rows.length > 0) {
           const row = rows[0];
-          let analysisResult = row.analysisresult;
+          let analysisResult = row.analysis_result;
           if (typeof analysisResult === 'string') {
             analysisResult = JSON.parse(analysisResult);
           }
@@ -179,8 +179,8 @@ export function useAnalysisHistory() {
 
         const { data: rows, error: err } = await supabase
           .from('analysis_history')
-          .select('id, analysisresult, created_at')
-          .eq('userid', user.id)
+          .select('id, analysis_result, created_at')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(10);
 
@@ -188,7 +188,7 @@ export function useAnalysisHistory() {
 
         if (rows) {
           const analyses = rows.map(row => {
-            let analysisResult = row.analysisresult;
+            let analysisResult = row.analysis_result;
             if (typeof analysisResult === 'string') {
               analysisResult = JSON.parse(analysisResult);
             }

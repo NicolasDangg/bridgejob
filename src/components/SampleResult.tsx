@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../lib/AuthContext';
+import { NativeStartNow } from './uitripled/native-start-now-shadcnui';
 import {
   ArrowRight,
   Zap,
@@ -181,15 +182,16 @@ export default function SampleResult() {
     });
   };
 
-  const runSampleAnalysis = async () => {
+  const runSampleAnalysis = () => new Promise<void>((resolve) => {
     setIsLoading(true);
     setTimeout(() => {
       setResponse(mockAiResponse);
       // Auto-expand gaps in sample view for better presentation
       setExpandedGaps(new Set(mockAiResponse.partial_matches.map(m => m.skill)));
       setIsLoading(false);
+      resolve();
     }, 1500);
-  };
+  });
 
   return (
     <section id="sample-result" className="bg-surface-white py-32 px-6 overflow-hidden">
@@ -247,23 +249,13 @@ export default function SampleResult() {
                       />
                     </div>
                   </div>
-                  <button
-                    onClick={runSampleAnalysis}
-                    disabled={isLoading}
-                    className="w-full py-2.5 bg-slate-900 text-white rounded-md text-sm font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {isLoading ? (
-                      <>
-                        <RefreshCw size={16} className="animate-spin" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <span>Run Analysis</span>
-                        <ArrowRight size={16} />
-                      </>
-                    )}
-                  </button>
+                  <NativeStartNow
+                    onStart={runSampleAnalysis}
+                    label="Run Analysis"
+                    loadingLabel="Analyzing..."
+                    successLabel="Analysis Complete"
+                    className="w-full"
+                  />
                 </div>
               </Card>
             </motion.div>

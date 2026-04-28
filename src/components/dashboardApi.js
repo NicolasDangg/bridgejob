@@ -26,13 +26,34 @@ export function buildAnalyzeEndpoint(baseUrl) {
   return normalized + '/api/analyze';
 }
 
-async function requestOnce(fetchFn, endpoint, input) {
+export function buildCoachEndpoint(baseUrl) {
+  const normalized = normalizeBaseUrl(baseUrl);
+  if (!normalized) {
+    return '/api/coach';
+  }
+
+  if (normalized.endsWith('/api/coach')) {
+    return normalized;
+  }
+
+  if (normalized.endsWith('/api')) {
+    return normalized + '/coach';
+  }
+
+  return normalized + '/api/coach';
+}
+
+async function requestOnce(fetchFn, endpoint, input, authToken) {
   let response;
+  const headers = { 'Content-Type': 'application/json' };
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
 
   try {
     response = await fetchFn(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(input),
     });
   } catch {
@@ -49,16 +70,32 @@ async function requestOnce(fetchFn, endpoint, input) {
   return payload;
 }
 
-export async function requestDashboardAnalysis(fetchFn, endpoint, input, fallbackEndpoint) {
+export async function requestDashboardAnalysis(fetchFn, endpoint, input, fallbackEndpoint, authToken) {
   try {
-    return await requestOnce(fetchFn, endpoint, input);
+    return await requestOnce(fetchFn, endpoint, input, authToken);
   } catch (err) {
     const shouldRetryWithFallback =
       Boolean(fallbackEndpoint) &&
       fallbackEndpoint !== endpoint;
 
     if (shouldRetryWithFallback) {
-      return requestOnce(fetchFn, fallbackEndpoint, input);
+      return requestOnce(fetchFn, fallbackEndpoint, input, authToken);
+    }
+
+    throw err;
+  }
+}
+
+export async function requestCoachChat(fetchFn, endpoint, input, fallbackEndpoint, authToken) {
+  try {
+    return await requestOnce(fetchFn, endpoint, input, authToken);
+  } catch (err) {
+    const shouldRetryWithFallback =
+      Boolean(fallbackEndpoint) &&
+      fallbackEndpoint !== endpoint;
+
+    if (shouldRetryWithFallback) {
+      return requestOnce(fetchFn, fallbackEndpoint, input, authToken);
     }
 
     throw err;

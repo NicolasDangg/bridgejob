@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -31,8 +31,10 @@ import {
 } from 'recharts';
 import { cn } from '../lib/utils';
 import { useAuth } from '../lib/AuthContext';
+import { Button } from '@/src/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
 import { supabase } from '../lib/supabase';
-import { buildAnalyzeEndpoint, requestDashboardAnalysis } from './dashboardApi';
+import { buildAnalyzeEndpoint, requestDashboardAnalysis } from './dashboardApi.js';
 import DashboardLayout from './DashboardLayout';
 
 // --- Types ---
@@ -415,10 +417,18 @@ const ReadinessScoreChart = ({ data }: { data: any[] }) => (
           tickLine={false}
           axisLine={false}
           tickFormatter={(val) => `${val}%`}
+          domain={[0, 100]}
         />
         <Tooltip
-          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-          itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+          contentStyle={{ 
+            borderRadius: '12px', 
+            border: 'none', 
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+            padding: '8px 12px'
+          }}
+          itemStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#3B82F6' }}
+          labelStyle={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 'bold' }}
+          formatter={(value: number) => [`${value}%`, 'Readiness']}
         />
         <Area
           type="monotone"
@@ -438,10 +448,22 @@ const ReadinessScoreChart = ({ data }: { data: any[] }) => (
 // --- Main Component ---
 
 export default function Dashboard() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('Overview');
+  const location = useLocation();
   const [jdText, setJdText] = useState('');
   const [candidateText, setCandidateText] = useState('');
+  
+  // Handle prefilled data from Resume Creator
+  useEffect(() => {
+    const state = location.state as { prefilledCandidate?: string } | null;
+    if (state?.prefilledCandidate) {
+      setCandidateText(state.prefilledCandidate);
+      setActiveTab('Overview');
+      // Clear state to prevent re-fill on refresh if desirable, 
+      // but usually state persists only for this navigation.
+    }
+  }, [location.state]);
   const [response, setResponse] = useState<FitResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -484,7 +506,7 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from(ANALYSIS_HISTORY_TABLE)
         .select('*')
-        .eq('userid', user.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -584,7 +606,14 @@ export default function Dashboard() {
     try {
       const endpoint = buildAnalyzeEndpoint(import.meta.env.VITE_API_BASE_URL);
       const fallbackEndpoint = import.meta.env.DEV ? 'http://localhost:3001/api/analyze' : undefined;
-      const result = (await requestDashboardAnalysis(fetch, endpoint, { jd: jdText, skills: candidateText }, fallbackEndpoint)) as AnalyzeApiResponse;
+      const authToken = session?.access_token;
+      const result = (await requestDashboardAnalysis(
+        fetch,
+        endpoint,
+        { jd: jdText, skills: candidateText },
+        fallbackEndpoint,
+        authToken,
+      )) as AnalyzeApiResponse;
 
       if (result.success) {
         const normalizedResult = normalizeFitResponse(result.data, {
@@ -599,24 +628,6 @@ export default function Dashboard() {
 
         const savedRun = buildHistoryEntry(normalizedResult, jdText, candidateText);
         setHistory((current) => [savedRun, ...current.filter((item) => item.response.job_title !== normalizedResult.job_title)].slice(0, 10));
-
-        if (supabase && user?.id) {
-          const { error: saveError } = await supabase.from(ANALYSIS_HISTORY_TABLE).insert({
-            userid: user.id,
-            jobdata: {
-              jobTitle: normalizedResult.job_title,
-              jobDescription: jdText,
-              candidateProfile: candidateText,
-            },
-            analysisresult: normalizedResult,
-            stored_json: JSON.stringify(result.data),
-            created_at: new Date().toISOString(),
-          });
-
-          if (saveError) {
-            setError(saveError.message || 'Failed to save analysis history.');
-          }
-        }
 
         setUsageStats((current) => ({
           totalRuns: current.totalRuns + 1,
@@ -663,20 +674,29 @@ export default function Dashboard() {
       )}
     >
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-200/50 p-1 rounded-md w-fit mb-8">
-        {['Overview', 'Readiness', 'History'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={cn(
-              "px-4 py-1.5 rounded-md text-sm font-medium transition-all",
-              activeTab === tab ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
-            )}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-8">
+        <TabsList className="relative flex w-fit items-center gap-1 rounded-xl bg-gray-200/50 p-1 border border-black/5">
+          {['Overview', 'Readiness', 'History'].map((tab) => {
+            const isActive = activeTab === tab;
+            return (
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className="relative z-10 rounded-lg px-6 py-1.5 text-sm font-medium transition-colors data-[state=active]:text-gray-900 data-[state=inactive]:text-gray-500 data-[state=inactive]:hover:text-gray-700 data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="active-dashboard-tab"
+                    className="absolute inset-0 z-[-1] rounded-lg bg-white shadow-sm"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                {tab}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+      </Tabs>
 
       <div className="grid grid-cols-12 gap-8">
         {/* Left Column */}
@@ -718,13 +738,14 @@ export default function Dashboard() {
                           </div>
                         </div>
                         {error && <p className="text-[11px] text-red-600 font-medium">{error}</p>}
-                        <button
+                        <Button
                           disabled={isLoading}
                           onClick={runAnalysis}
-                          className="w-full py-2.5 bg-slate-900 text-white rounded-md text-sm font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50"
+                          loading={isLoading}
+                          className="w-full py-2.5 bg-slate-900 text-white rounded-md text-sm font-semibold hover:bg-slate-800 transition-colors"
                         >
-                          {isLoading ? 'Analyzing...' : 'Run Analysis'}
-                        </button>
+                          Run Analysis
+                        </Button>
                       </div>
                     </Card>
                   </motion.div>
@@ -768,36 +789,41 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="space-y-3">
-                    {sortedResults.slice(0, 10).map((item, idx) => (
-                      <div key={idx} className="flex flex-col border-b border-gray-50 last:border-0">
-                        <button
-                          onClick={() => item.status !== 'MATCH' && toggleOverviewGap(item.skill)}
-                          disabled={item.status === 'MATCH'}
-                          className={cn(
-                            "flex items-center gap-3 p-2 w-full text-left transition-colors rounded-md group",
-                            item.status === 'GAP' ? "hover:bg-red-50/50 cursor-pointer" :
-                              item.status === 'PARTIAL' ? "hover:bg-amber-50/50 cursor-pointer" : "cursor-default"
-                          )}
-                        >
+                    {sortedResults.slice(0, 10).map((item, idx) => {
+                      const isExpanded = expandedOverviewGaps.has(item.skill);
+                      return (
+                        <div key={idx} className="flex flex-col border-b border-gray-50 last:border-0">
+                          <Button
+                            variant="ghost"
+                            onClick={() => item.status !== 'MATCH' && toggleOverviewGap(item.skill)}
+                            disabled={item.status === 'MATCH'}
+                            className={cn(
+                              "flex items-center justify-start gap-8 p-4 w-full text-left transition-colors rounded-xl group h-auto",
+                              isExpanded 
+                                ? (item.status === 'GAP' ? "bg-red-50/30" : "bg-amber-50/30") 
+                                : (item.status === 'GAP' ? "hover:bg-red-50/50 cursor-pointer" :
+                                   item.status === 'PARTIAL' ? "hover:bg-amber-50/50 cursor-pointer" : "cursor-default")
+                            )}
+                          >
                           <div className={cn(
-                            "w-8 h-8 rounded-md flex items-center justify-center shrink-0",
+                            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
                             item.status === 'MATCH' ? "bg-emerald-50 text-emerald-600" :
                               item.status === 'PARTIAL' ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-600"
                           )}>
-                            {item.status === 'MATCH' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                            {item.status === 'MATCH' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
                           </div>
-                          <div className="flex-1">
-                            <h4 className="text-xs font-semibold">{item.skill}</h4>
-                            <p className="text-[10px] text-gray-400">
+                          <div className="flex-1 flex flex-col justify-center">
+                            <h4 className="text-sm font-bold text-slate-900">{item.skill}</h4>
+                            <p className="text-xs text-gray-400 font-medium">
                               {item.status === 'MATCH' ? 'Strong Match' :
                                 item.status === 'PARTIAL' ? 'Partial Match' : 'Notable Gap'}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-4">
                             <PriorityBadge priority={(item as any).priority} />
                             {item.status !== 'MATCH' && (
                               <ChevronRight
-                                size={14}
+                                size={18}
                                 className={cn(
                                   "text-gray-300 transition-transform group-hover:text-red-400",
                                   expandedOverviewGaps.has(item.skill) && (
@@ -807,7 +833,7 @@ export default function Dashboard() {
                               />
                             )}
                           </div>
-                        </button>
+                        </Button>
                         <AnimatePresence>
                           {expandedOverviewGaps.has(item.skill) && (
                             <motion.div
@@ -848,7 +874,8 @@ export default function Dashboard() {
                           )}
                         </AnimatePresence>
                       </div>
-                    ))}
+                        );
+                      })}
                     {sortedResults.length > 10 && (
                       <button onClick={() => setActiveTab('Readiness')} className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mt-2 hover:underline">
                         View all {sortedResults.length} skills
@@ -1060,15 +1087,16 @@ export default function Dashboard() {
         <div className="col-span-12 lg:col-span-4 space-y-6">
           {/* Run Another Analysis Button */}
           {response && (
-            <motion.button
+            <Button
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               onClick={handleReset}
-              className="w-full flex items-center justify-center gap-3 py-4 bg-white border border-gray-200 text-slate-900 rounded-md text-sm font-bold shadow-sm hover:bg-slate-50 transition-all group"
+              variant="outline"
+              className="w-full flex items-center justify-center gap-3 py-6 bg-white border border-gray-200 text-slate-900 rounded-md text-sm font-bold shadow-sm hover:bg-slate-50 transition-all group h-auto"
             >
               <RefreshCw size={18} className="text-blue-500 group-hover:rotate-180 transition-transform duration-500" />
               Run Another Analysis
-            </motion.button>
+            </Button>
           )}
 
           {/* Career Roadmap Card */}
