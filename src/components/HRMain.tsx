@@ -142,6 +142,9 @@ export default function HRMain() {
   const locationRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const firstCriterionRef = useRef<HTMLInputElement>(null);
+  const detailsHeadingRef = useRef<HTMLHeadingElement>(null);
+  const scorecardHeadingRef = useRef<HTMLHeadingElement>(null);
+  const previousStepRef = useRef<1 | 2>(1);
   const reduceMotion = useReducedMotion();
 
   const isLoading = loadedStorageKey !== storageKey;
@@ -152,6 +155,12 @@ export default function HRMain() {
 
   useEffect(() => {
     let storedWorkspace: Workspace = EMPTY_WORKSPACE_VALUE;
+    setView("portfolio");
+    setStep(1);
+    setDraft(createEmptyDraft());
+    setFieldErrors({});
+    setCriteriaError(null);
+    previousStepRef.current = 1;
     try {
       const serialized = window.localStorage.getItem(storageKey);
       if (serialized) storedWorkspace = asWorkspace(JSON.parse(serialized));
@@ -172,17 +181,11 @@ export default function HRMain() {
   }, [loadedStorageKey, storageKey, workspace]);
 
   useEffect(() => {
-    if (view !== "create" || step !== 1) return;
-    const firstInvalidField = (["title", "department", "location", "description"] as JobField[]).find((field) => fieldErrors[field]);
-    if (firstInvalidField === "title") titleRef.current?.focus();
-    if (firstInvalidField === "department") departmentRef.current?.focus();
-    if (firstInvalidField === "location") locationRef.current?.focus();
-    if (firstInvalidField === "description") descriptionRef.current?.focus();
-  }, [fieldErrors, step, view]);
-
-  useEffect(() => {
-    if (view === "create" && step === 2 && criteriaError) firstCriterionRef.current?.focus();
-  }, [criteriaError, step, view]);
+    if (view !== "create" || previousStepRef.current === step) return;
+    previousStepRef.current = step;
+    if (step === 2) scorecardHeadingRef.current?.focus();
+    if (step === 1) detailsHeadingRef.current?.focus();
+  }, [step, view]);
 
   const beginCreating = () => {
     setDraft(createEmptyDraft());
@@ -215,10 +218,16 @@ export default function HRMain() {
     if (!draft.location.trim()) errors.location = "Add a location, or write remote if applicable.";
     if (!draft.description.trim()) errors.description = "Add a short description of the work and its context.";
     setFieldErrors(errors);
-    if (Object.keys(errors).length === 0) {
-      setCriteriaError(null);
-      setStep(2);
+    if (Object.keys(errors).length > 0) {
+      const firstInvalidField = (["title", "department", "location", "description"] as JobField[]).find((field) => errors[field]);
+      if (firstInvalidField === "title") titleRef.current?.focus();
+      if (firstInvalidField === "department") departmentRef.current?.focus();
+      if (firstInvalidField === "location") locationRef.current?.focus();
+      if (firstInvalidField === "description") descriptionRef.current?.focus();
+      return;
     }
+    setCriteriaError(null);
+    setStep(2);
   };
 
   const updateCriterion = (draftId: string, field: keyof Omit<CriterionDraft, "draftId">, value: string) => {
@@ -339,6 +348,8 @@ export default function HRMain() {
             locationRef={locationRef}
             descriptionRef={descriptionRef}
             firstCriterionRef={firstCriterionRef}
+            detailsHeadingRef={detailsHeadingRef}
+            scorecardHeadingRef={scorecardHeadingRef}
             onCancel={cancelCreating}
             onBack={() => setStep(1)}
             onContinue={continueToScorecard}
@@ -530,6 +541,8 @@ function CreateFlow({
   locationRef: RefObject<HTMLInputElement | null>;
   descriptionRef: RefObject<HTMLTextAreaElement | null>;
   firstCriterionRef: RefObject<HTMLInputElement | null>;
+  detailsHeadingRef: RefObject<HTMLHeadingElement | null>;
+  scorecardHeadingRef: RefObject<HTMLHeadingElement | null>;
   onBack: () => void;
   onContinue: (event: FormEvent<HTMLFormElement>) => void;
   onCreate: (event: FormEvent<HTMLFormElement>) => void;
@@ -556,7 +569,7 @@ function CreateFlow({
         <form className="space-y-6" onSubmit={onContinue} noValidate>
           <Card className="border-gray-200 bg-white shadow-sm">
             <CardHeader>
-              <CardTitle className="text-lg text-slate-900">Role details</CardTitle>
+              <h3 ref={detailsHeadingRef} tabIndex={-1} className="text-lg font-semibold text-slate-900">Role details</h3>
               <CardDescription>Give reviewers enough context to understand the opportunity.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-5 sm:grid-cols-2">
@@ -623,7 +636,7 @@ function CreateFlow({
         <form className="space-y-6" onSubmit={onCreate} noValidate>
           <Card className="border-gray-200 bg-white shadow-sm">
             <CardHeader>
-              <CardTitle className="text-lg text-slate-900">What matters for this role?</CardTitle>
+              <h3 ref={scorecardHeadingRef} tabIndex={-1} className="text-lg font-semibold text-slate-900">What matters for this role?</h3>
               <CardDescription>Set the criteria reviewers should use. You can mark each one required or preferred and weight it from 1 to 5.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
