@@ -144,6 +144,10 @@ test('derives candidate creation time from a Date.now-style batch id', () => {
   const candidates = createCandidateResults(job, ['resume.pdf'], `batch-${uploadedAt}`);
   assert.equal(candidates[0].createdAt, new Date(uploadedAt).toISOString());
 });
+test('spreads fallback creation time across the full deterministic date range', () => {
+  const candidates = createCandidateResults(job, ['resume.pdf'], 'unparseable-batch');
+  assert.ok(Date.parse(candidates[0].createdAt) > Date.parse('2021-01-01T00:00:00.000Z'));
+});
 test('includes file position in generated identity while keeping duplicate-file evidence stable', () => {
   const first = createCandidateResults(job, ['duplicate.pdf', 'duplicate.pdf'], 'batch-a');
   const second = createCandidateResults(job, ['duplicate.pdf', 'duplicate.pdf'], 'batch-b');

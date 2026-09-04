@@ -177,7 +177,8 @@ function candidateTimestamp(batchId, seed) {
   if (batchTime !== null) return new Date(batchTime).toISOString();
   const start = Date.parse('2020-01-01T00:00:00.000Z');
   const end = Date.parse('2030-01-01T00:00:00.000Z');
-  return new Date(start + (hash(seed) % (end - start))).toISOString();
+  const fraction = hash(seed) / 0xffffffff;
+  return new Date(start + Math.floor(fraction * (end - start))).toISOString();
 }
 
 function candidateName(sourceFile, index, isArchive) {
