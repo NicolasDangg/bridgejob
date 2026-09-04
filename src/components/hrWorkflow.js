@@ -2,7 +2,7 @@ const WORKSPACE_VERSION = 1;
 
 export const DECISIONS = Object.freeze(['undecided', 'advance', 'hold', 'reject']);
 
-export const SORT_KEYS = Object.freeze(['score', 'name', 'evidence', 'gaps', 'decision']);
+export const SORT_KEYS = Object.freeze(['name', 'score', 'evidence', 'gaps', 'decision']);
 
 export const EMPTY_WORKSPACE = Object.freeze({
   version: WORKSPACE_VERSION,
@@ -35,8 +35,13 @@ function fileName(file) {
 }
 
 export function validateResumeFiles(files) {
-  if (!Array.isArray(files)) return { valid: false, accepted: [], rejected: [] };
-  const names = files.map(fileName);
+  let entries;
+  try {
+    entries = Array.from(files ?? []);
+  } catch {
+    return { valid: false, accepted: [], rejected: [] };
+  }
+  const names = entries.map(fileName);
   const rejected = names.filter((name) => !name || !VALID_EXTENSIONS.test(name));
   return {
     accepted: names.length > 0 && rejected.length === 0 ? names : [],
@@ -224,7 +229,7 @@ function metric(candidate, key) {
 
 export function sortCandidates(candidates, options = {}) {
   if (!Array.isArray(candidates)) return [];
-  const key = options.key ?? SORT_KEYS[0];
+  const key = options.key ?? 'score';
   const direction = options.direction === 'asc' ? 1 : -1;
   return [...candidates].sort((left, right) => {
     const a = metric(left, key);

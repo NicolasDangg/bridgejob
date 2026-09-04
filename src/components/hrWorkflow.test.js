@@ -20,7 +20,7 @@ const scorecard = [
 ];
 
 assert.deepEqual(DECISIONS, ['undecided', 'advance', 'hold', 'reject']);
-assert.deepEqual(SORT_KEYS, ['score', 'name', 'evidence', 'gaps', 'decision']);
+assert.deepEqual(SORT_KEYS, ['name', 'score', 'evidence', 'gaps', 'decision']);
 
 const job = {
   id: 'job-42', title: 'Data Lead', department: 'Engineering', location: 'Remote',
@@ -50,14 +50,28 @@ test('normalizes malformed and version-mismatched workspace data to a fresh empt
 test('rejects an empty file batch', () => {
   assert.deepEqual(validateResumeFiles([]), { valid: false, accepted: [], rejected: [] });
 });
+test('accepts FileList-shaped array-like input', () => {
+  const fileList = {
+    0: { name: 'resume.PDF' },
+    1: { name: 'resume.DOCX' },
+    length: 2,
+  };
+  assert.deepEqual(validateResumeFiles(fileList), {
+    valid: true,
+    accepted: ['resume.PDF', 'resume.DOCX'],
+    rejected: [],
+  });
+});
 
 test('discards malformed jobs and keeps the persisted valid selection or first job', () => {
   const secondJob = { ...job, id: 'job-43', title: 'Designer' };
   const input = { version: 1, selectedJobId: 'missing', jobs: [job, { id: '', title: 'bad' }, secondJob] };
   const normalized = normalizeWorkspace(input);
+  assert.deepEqual(normalized.jobs.map(({ id }) => id), ['job-42', 'job-43']);
   assert.equal(normalized.selectedJobId, 'job-42');
   assert.notEqual(normalized.jobs, input.jobs);
   assert.notEqual(normalized.jobs[0].scorecard, input.jobs[0].scorecard);
+  assert.equal(normalizeWorkspace({ ...input, selectedJobId: secondJob.id }).selectedJobId, secondJob.id);
 });
 test('filters malformed criteria and candidates with malformed assessments inside valid jobs', () => {
   const validCandidate = makeCandidates()[0];
@@ -133,10 +147,10 @@ test('sorts candidates by every key in both directions without mutating input', 
     { id: '3', name: 'Bea', score: 90, assessments: [{ status: 'met', evidence: 'a' }, { status: 'unclear', evidence: 'b' }], decision: 'undecided' },
   ];
   const original = structuredClone(candidates);
-  assert.deepEqual(sortCandidates(candidates, { key: SORT_KEYS[0], direction: 'desc' }).map(({ id }) => id), ['2', '3', '1']);
-  assert.deepEqual(sortCandidates(candidates, { key: SORT_KEYS[0], direction: 'asc' }).map(({ id }) => id), ['1', '2', '3']);
-  assert.deepEqual(sortCandidates(candidates, { key: SORT_KEYS[1], direction: 'asc' }).map(({ name }) => name), ['Amy', 'Bea', 'Zed']);
-  assert.deepEqual(sortCandidates(candidates, { key: SORT_KEYS[1], direction: 'desc' }).map(({ name }) => name), ['Zed', 'Bea', 'Amy']);
+  assert.deepEqual(sortCandidates(candidates, { key: SORT_KEYS[0], direction: 'asc' }).map(({ name }) => name), ['Amy', 'Bea', 'Zed']);
+  assert.deepEqual(sortCandidates(candidates, { key: SORT_KEYS[0], direction: 'desc' }).map(({ name }) => name), ['Zed', 'Bea', 'Amy']);
+  assert.deepEqual(sortCandidates(candidates, { key: SORT_KEYS[1], direction: 'desc' }).map(({ id }) => id), ['2', '3', '1']);
+  assert.deepEqual(sortCandidates(candidates, { key: SORT_KEYS[1], direction: 'asc' }).map(({ id }) => id), ['1', '2', '3']);
   assert.deepEqual(sortCandidates(candidates, { key: SORT_KEYS[2], direction: 'desc' }).map(({ id }) => id), ['1', '3', '2']);
   assert.deepEqual(sortCandidates(candidates, { key: SORT_KEYS[2], direction: 'asc' }).map(({ id }) => id), ['2', '1', '3']);
   assert.deepEqual(sortCandidates(candidates, { key: SORT_KEYS[3], direction: 'asc' }).map(({ id }) => id), ['1', '2', '3']);
