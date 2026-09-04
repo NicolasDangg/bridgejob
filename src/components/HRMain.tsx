@@ -348,13 +348,8 @@ export default function HRMain() {
     setCriteriaError(null);
   };
   const handleResumeUpload = (files: FileList | null) => {
-    uploadTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-    uploadTimersRef.current = [];
-    setUploadError(null);
-
     const validation = validateResumeFiles(files);
     if (!validation.valid) {
-      setUploadStatus(null);
       setUploadError(
         validation.rejected.length > 0
           ? `Unsupported file type: ${validation.rejected.join(", ")}. Choose only .zip, .pdf, or .docx files and try again.`
@@ -362,6 +357,13 @@ export default function HRMain() {
       );
       return;
     }
+    if (uploadStatus?.phase === "queued" || uploadStatus?.phase === "processing") {
+      setUploadError("Finish the current file batch before choosing another.");
+      return;
+    }
+    uploadTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    uploadTimersRef.current = [];
+    setUploadError(null);
 
     const targetJobId = workspace.selectedJobId;
     const targetJob = workspace.jobs.find((candidateJob) => candidateJob.id === targetJobId);
@@ -722,6 +724,7 @@ function SelectedJobWorkspace({
             <Input
               id="resume-files"
               type="file"
+              disabled={uploadStatus?.phase === "queued" || uploadStatus?.phase === "processing"}
               accept=".zip,.pdf,.docx"
               multiple
               onChange={onInputChange}
@@ -872,7 +875,7 @@ function FragmentRow({
             onClick={onToggle}
             className="inline-flex min-h-10 max-w-full items-start gap-2 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
           >
-            <ChevronDown aria-hidden="true" className={cn("mt-0.5 size-4 shrink-0 transition-transform", expanded && "rotate-180")} />
+            <ChevronDown aria-hidden="true" className={cn("mt-0.5 size-4 shrink-0 motion-safe:transition-transform motion-reduce:transition-none", expanded && "rotate-180")} />
             <span className="min-w-0 break-words">
               <span className="block">{candidate.name}</span>
               <span className="mt-1 block break-all text-xs font-normal text-slate-500">{candidate.sourceFile}</span>
