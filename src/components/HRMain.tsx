@@ -114,8 +114,8 @@ const createEmptyDraft = (): JobDraft => ({
   criteria: [createDraftCriterion("criterion-1")],
 });
 
-function storageKeyFor(email: string | undefined): string {
-  return `${STORAGE_PREFIX}${email || "guest"}`;
+function storageKeyFor(userId: string | undefined): string {
+  return `${STORAGE_PREFIX}${userId || "guest"}`;
 }
 
 function getUuid(): string {
@@ -129,7 +129,7 @@ function asWorkspace(value: unknown): Workspace {
 
 export default function HRMain() {
   const { user } = useAuth();
-  const storageKey = storageKeyFor(user?.email ?? undefined);
+  const storageKey = storageKeyFor(user?.id);
   const [workspace, setWorkspace] = useState<Workspace>(EMPTY_WORKSPACE_VALUE);
   const [loadedStorageKey, setLoadedStorageKey] = useState<string | null>(null);
   const [view, setView] = useState<View>("portfolio");
@@ -142,6 +142,7 @@ export default function HRMain() {
   const locationRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const firstCriterionRef = useRef<HTMLInputElement>(null);
+  const reduceMotion = useReducedMotion();
 
   const isLoading = loadedStorageKey !== storageKey;
   const selectedJob = useMemo(
