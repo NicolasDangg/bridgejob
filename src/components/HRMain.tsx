@@ -386,7 +386,7 @@ export default function HRMain() {
       setWorkspace((current) => {
         const currentTarget = current.jobs.find((candidateJob) => candidateJob.id === targetJob.id);
         if (!currentTarget) return current;
-        const candidates = createCandidateResults(targetJob, acceptedFiles, batchId);
+        const candidates = createCandidateResults(targetJob, acceptedFiles, batchId) as Candidate[];
         if (candidates.length === 0) return current;
         return {
           ...current,
@@ -967,6 +967,7 @@ function CreateFlow({
   firstCriterionRef: RefObject<HTMLInputElement | null>;
   detailsHeadingRef: RefObject<HTMLHeadingElement | null>;
   scorecardHeadingRef: RefObject<HTMLHeadingElement | null>;
+  onCancel: () => void;
   onBack: () => void;
   onContinue: (event: FormEvent<HTMLFormElement>) => void;
   onCreate: (event: FormEvent<HTMLFormElement>) => void;
