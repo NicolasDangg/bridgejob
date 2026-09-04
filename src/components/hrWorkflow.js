@@ -95,7 +95,7 @@ function normalizeCandidate(candidate) {
     || typeof candidate.sourceFile !== 'string'
     || typeof candidate.score !== 'number' || !Number.isFinite(candidate.score)
     || !VALID_DECISIONS.has(candidate.decision)
-    || typeof candidate.createdAt !== 'string'
+    || typeof candidate.createdAt !== 'string' || Number.isNaN(Date.parse(candidate.createdAt))
     || !Array.isArray(candidate.assessments)) {
     return null;
   }
@@ -157,10 +157,24 @@ function statusFor(seed) {
 function evidenceFor(status, criterion, sourceFile) {
   if (status === 'missing') return '';
   const qualifier = status === 'met' ? 'demonstrates' : 'suggests experience with';
-  return `${criterion.name}: ${sourceFile} ${qualifier} relevant work and outcomes.`;
+  return `${sourceFile} ${qualifier} ${criterion.name} in relevant work and outcomes.`;
 }
 
-function candidateTimestamp(seed) {
+function parseBatchTime(batchId) {
+  const value = String(batchId ?? '');
+  const numericMatch = value.match(/(\d{10,})/);
+  const numeric = numericMatch ? Number(numericMatch[1]) : Number(batchId);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    const milliseconds = numeric < 1e12 ? numeric * 1000 : numeric;
+    if (Number.isFinite(milliseconds) && !Number.isNaN(new Date(milliseconds).getTime())) return milliseconds;
+  }
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function candidateTimestamp(batchId, seed) {
+  const batchTime = parseBatchTime(batchId);
+  if (batchTime !== null) return new Date(batchTime).toISOString();
   const start = Date.parse('2020-01-01T00:00:00.000Z');
   const end = Date.parse('2030-01-01T00:00:00.000Z');
   return new Date(start + (hash(seed) % (end - start))).toISOString();
@@ -176,18 +190,14 @@ export function createCandidateResults(job, files, batchId = 'batch') {
   const validation = validateResumeFiles(files);
   if (!validation.valid) return [];
   const results = [];
+  if (job.scorecard.some((criterion) => normalizeCriterion(criterion) === null)) return [];
   for (let filePosition = 0; filePosition < validation.accepted.length; filePosition += 1) {
     const sourceFile = validation.accepted[filePosition];
     const isArchive = /\.zip$/i.test(sourceFile);
     const count = isArchive ? 3 : 1;
     for (let index = 0; index < count; index += 1) {
       const assessments = job.scorecard.map((criterion) => {
-        const normalized = normalizeCriterion(criterion) ?? {
-          id: String(criterion?.id ?? ''),
-          name: String(criterion?.name ?? 'Criterion'),
-          importance: VALID_IMPORTANCE.has(criterion?.importance) ? criterion.importance : 'preferred',
-          weight: Number.isInteger(criterion?.weight) && criterion.weight > 0 ? criterion.weight : 1,
-        };
+        const normalized = normalizeCriterion(criterion);
         const status = statusFor(`${job.id}|${sourceFile}|${index}|${normalized.id}`);
         const factor = status === 'met' ? 1 : status === 'unclear' ? 0.5 : 0;
         return {
@@ -205,12 +215,12 @@ export function createCandidateResults(job, files, batchId = 'batch') {
       const score = totalWeight === 0 ? 0 : Math.round((contribution / totalWeight) * 100);
       const identitySeed = `${job.id}|${batchId}|${sourceFile}|${filePosition}|${index}`;
       results.push({
-        id: `candidate-${hash(identitySeed).toString(16).padStart(8, '0')}`,
+        id: `candidate-${encodeURIComponent(JSON.stringify([String(job.id), String(batchId), sourceFile, filePosition, index]))}`,
         name: candidateName(sourceFile, index, isArchive),
         sourceFile,
         score,
         decision: DECISIONS[0],
-        createdAt: candidateTimestamp(identitySeed),
+        createdAt: candidateTimestamp(batchId, identitySeed),
         assessments,
       });
     }
@@ -253,7 +263,8 @@ export function updateCandidateDecision(workspace, jobId, candidateId, decision)
 }
 
 function csvField(value) {
-  const text = value == null ? '' : String(value);
+  let text = value == null ? '' : String(value);
+  if (/^[=+\-@]/.test(text)) text = `'${text}`;
   return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 

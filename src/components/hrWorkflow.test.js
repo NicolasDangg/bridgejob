@@ -80,18 +80,27 @@ test('filters malformed criteria and candidates with malformed assessments insid
     id: 'malformed-assessment',
     assessments: [{ ...validCandidate.assessments[0], status: 'invalid' }],
   };
+  const invalidDateCandidate = {
+    ...validCandidate,
+    id: 'invalid-date',
+    createdAt: 'not-a-date',
+  };
   const input = {
     version: 1,
     selectedJobId: job.id,
     jobs: [{
       ...job,
       scorecard: [scorecard[0], { id: 'bad-criterion' }],
-      candidates: [validCandidate, malformedCandidate],
+      candidates: [validCandidate, malformedCandidate, invalidDateCandidate],
     }],
   };
   const normalized = normalizeWorkspace(input);
   assert.deepEqual(normalized.jobs[0].scorecard.map(({ id }) => id), ['leadership']);
   assert.deepEqual(normalized.jobs[0].candidates.map(({ id }) => id), [validCandidate.id]);
+});
+
+test('does not generate candidates from invalid scorecard criteria', () => {
+  assert.deepEqual(createCandidateResults({ ...job, scorecard: [scorecard[0], { id: 'bad' }] }, ['resume.pdf'], 'batch-a'), []);
 });
 
 test('generates one PDF/DOCX candidate and three candidates per ZIP with evidence assessments', () => {
@@ -112,6 +121,7 @@ test('generates one PDF/DOCX candidate and three candidates per ZIP with evidenc
       assert.equal(typeof assessment.weight, 'number');
       assert.ok(['met', 'unclear', 'missing'].includes(assessment.status));
       assert.equal(typeof assessment.evidence, 'string');
+      if (assessment.evidence) assert.ok(!assessment.evidence.startsWith(`${assessment.criterionName}:`));
       assert.equal(typeof assessment.contribution, 'number');
     }
   }
@@ -128,6 +138,11 @@ test('candidate scoring and evidence are deterministic and independent of batch 
   );
   assert.notEqual(first[0].id, second[0].id);
   assert.notEqual(first[0].createdAt, second[0].createdAt);
+});
+test('derives candidate creation time from a Date.now-style batch id', () => {
+  const uploadedAt = Date.UTC(2026, 3, 5, 12, 30, 0);
+  const candidates = createCandidateResults(job, ['resume.pdf'], `batch-${uploadedAt}`);
+  assert.equal(candidates[0].createdAt, new Date(uploadedAt).toISOString());
 });
 test('includes file position in generated identity while keeping duplicate-file evidence stable', () => {
   const first = createCandidateResults(job, ['duplicate.pdf', 'duplicate.pdf'], 'batch-a');
@@ -192,4 +207,14 @@ test('serializes supplied candidate order and RFC-style quotes CSV fields', () =
     '"Smith, Alex",alex.pdf,88,1,SQL,,hold,"Communication: Said ""hello""\nwith clarity"',
     'Zoe,zoe.pdf,42,1,,Communication,reject,Communication: Needs review',
   ].join('\n'));
+});
+test('neutralizes spreadsheet formula prefixes in every CSV cell', () => {
+  const csv = serializeCandidatesCsv([{
+    name: '=CMD(1)',
+    sourceFile: '+resume.pdf',
+    score: -1,
+    decision: '@hold',
+    assessments: [{ criterionName: '@Skill', status: 'met', evidence: '-unsafe' }],
+  }]);
+  assert.equal(csv.split('\n')[1], "'=CMD(1),'+resume.pdf,'-1,1,,,'@hold,'@Skill: -unsafe");
 });
