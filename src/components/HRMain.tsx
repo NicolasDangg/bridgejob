@@ -483,14 +483,16 @@ export default function HRMain() {
             <EmptyPortfolio />
           </>
         ) : (
-          <>
-            <JobRail
-              jobs={workspace.jobs}
-              selectedJobId={workspace.selectedJobId}
-              onSelect={(jobId) => setWorkspace((current) => ({ ...current, selectedJobId: jobId }))}
-            />
+          <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
+            <div className="min-w-0 lg:col-span-3">
+              <JobRail
+                jobs={workspace.jobs}
+                selectedJobId={workspace.selectedJobId}
+                onSelect={(jobId) => setWorkspace((current) => ({ ...current, selectedJobId: jobId }))}
+              />
+            </div>
             {selectedJob && (
-              <>
+              <div className="min-w-0 space-y-6 lg:col-span-9">
                 {pageHeader}
                 <SelectedJobWorkspace
                   key={selectedJob.id}
@@ -500,9 +502,9 @@ export default function HRMain() {
                   onInputChange={handleResumeInputChange}
                   onDecisionChange={handleDecisionChange}
                 />
-              </>
+              </div>
             )}
-          </>
+          </div>
         )}
       </motion.div>
     </DashboardLayout>
@@ -546,11 +548,11 @@ function JobRail({
           {jobs.length} {jobs.length === 1 ? "role" : "roles"}
         </Badge>
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-1" role="list" aria-label="Active jobs">
+      <div className="flex gap-3 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible" role="list" aria-label="Active jobs">
         {jobs.map((job) => {
           const selected = job.id === selectedJobId;
           return (
-            <div key={job.id} role="listitem" className="min-w-64 flex-1">
+            <div key={job.id} role="listitem" className="min-w-64 flex-1 lg:min-w-0">
               <button
                 type="button"
                 aria-current={selected ? "true" : undefined}
@@ -598,9 +600,12 @@ function SelectedJobWorkspace({
     () => sortCandidates(job.candidates, sortState),
     [job.candidates, sortState],
   );
-  const highScoreCount = job.candidates.filter((candidate) => candidate.score >= 80).length;
-  const reviewedCount = job.candidates.filter((candidate) => candidate.decision !== "undecided").length;
-  const currentProcessingCount = uploadStatus?.targetJobId === job.id && uploadStatus.phase !== "complete" ? 1 : 0;
+  const activeStats = useMemo(() => ({
+    totalCandidates: job.candidates.length,
+    highScoreCount: job.candidates.filter((candidate) => candidate.score >= 80).length,
+    reviewedCount: job.candidates.filter((candidate) => candidate.decision !== "undecided").length,
+    currentProcessingCount: uploadStatus?.targetJobId === job.id && uploadStatus.phase !== "complete" ? 1 : 0,
+  }), [job.id, job.candidates, uploadStatus?.phase, uploadStatus?.targetJobId]);
   const isCurrentBatchTarget = uploadStatus?.targetJobId === job.id;
   const progress = uploadStatus?.phase === "complete" ? 100 : uploadStatus?.phase === "processing" ? 50 : 0;
 
@@ -642,11 +647,15 @@ function SelectedJobWorkspace({
         ? <ArrowDownAZ aria-hidden="true" className="size-4 text-blue-600" />
         : <ArrowDown01 aria-hidden="true" className="size-4 text-blue-600" />);
   };
-
   const sortHeader = (key: CandidateSortKey, label: string) => {
     const active = sortState.key === key;
-    const nextDirection = active && sortState.direction === "desc" ? "ascending" : "descending";
-    const directionLabel = active ? `currently ${sortState.direction === "desc" ? "descending" : "ascending"}` : "not currently sorted";
+    const defaultDirection = key === "name" || key === "decision" ? "ascending" : "descending";
+    const nextDirection = active
+      ? (sortState.direction === "desc" ? "ascending" : "descending")
+      : defaultDirection;
+    const directionLabel = active
+      ? `currently ${sortState.direction === "desc" ? "descending" : "ascending"}`
+      : "not currently sorted";
     return (
       <button
         type="button"
@@ -680,10 +689,10 @@ function SelectedJobWorkspace({
             <p className="mt-2 max-w-3xl whitespace-pre-wrap text-base leading-relaxed text-slate-600">{job.description}</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard icon={<Users aria-hidden="true" className="size-5" />} label="Total candidates" value={job.candidates.length} />
-            <StatCard icon={<Check aria-hidden="true" className="size-5" />} label="Score 80 or higher" value={highScoreCount} />
-            <StatCard icon={<CheckCircle2 aria-hidden="true" className="size-5" />} label="Reviewed decisions" value={reviewedCount} />
-            <StatCard icon={<LoaderCircle aria-hidden="true" className="size-5" />} label="Current processing" value={currentProcessingCount} />
+            <StatCard icon={<Users aria-hidden="true" className="size-5" />} label="Total candidates" value={activeStats.totalCandidates} />
+            <StatCard icon={<Check aria-hidden="true" className="size-5" />} label="Score 80 or higher" value={activeStats.highScoreCount} />
+            <StatCard icon={<CheckCircle2 aria-hidden="true" className="size-5" />} label="Reviewed decisions" value={activeStats.reviewedCount} />
+            <StatCard icon={<LoaderCircle aria-hidden="true" className="size-5" />} label="Current processing" value={activeStats.currentProcessingCount} />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-slate-900">Scorecard summary</h3>
@@ -874,7 +883,7 @@ function FragmentRow({
         <td className="px-4 py-4 tabular-nums text-slate-700"><span className="inline-flex items-center gap-1.5"><CheckCircle2 aria-hidden="true" className="size-4 text-emerald-600" />{evidenceCount}</span></td>
         <td className="px-4 py-4 tabular-nums text-slate-700"><span className="inline-flex items-center gap-1.5"><CircleAlert aria-hidden="true" className="size-4 text-amber-600" />{gapsCount}</span></td>
         <td className="px-4 py-4">
-          <label htmlFor={`decision-${candidate.id}`} className="sr-only">Decision for {candidate.name}</label>
+          <label htmlFor={`decision-${candidate.id}`} className="mb-1 block text-xs font-medium text-slate-500 sm:sr-only">Decision for {candidate.name}</label>
           <select
             id={`decision-${candidate.id}`}
             value={candidate.decision}
