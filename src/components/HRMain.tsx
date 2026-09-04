@@ -523,6 +523,8 @@ function CreateFlow({
   locationRef,
   descriptionRef,
   firstCriterionRef,
+  detailsHeadingRef,
+  scorecardHeadingRef,
   onCancel,
   onBack,
   onContinue,
