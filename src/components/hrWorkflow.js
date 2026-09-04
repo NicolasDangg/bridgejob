@@ -1,19 +1,8 @@
 const WORKSPACE_VERSION = 1;
 
-export const DECISIONS = Object.freeze({
-  UNDECIDED: 'undecided',
-  ADVANCE: 'advance',
-  HOLD: 'hold',
-  REJECT: 'reject',
-});
+export const DECISIONS = Object.freeze(['undecided', 'advance', 'hold', 'reject']);
 
-export const SORT_KEYS = Object.freeze({
-  NAME: 'name',
-  SCORE: 'score',
-  EVIDENCE: 'evidence',
-  GAPS: 'gaps',
-  DECISION: 'decision',
-});
+export const SORT_KEYS = Object.freeze(['score', 'name', 'evidence', 'gaps', 'decision']);
 
 export const EMPTY_WORKSPACE = Object.freeze({
   version: WORKSPACE_VERSION,
@@ -21,9 +10,11 @@ export const EMPTY_WORKSPACE = Object.freeze({
   jobs: Object.freeze([]),
 });
 
-const VALID_DECISIONS = new Set(Object.values(DECISIONS));
+const VALID_DECISIONS = new Set(DECISIONS);
 const VALID_IMPORTANCE = new Set(['required', 'preferred']);
+const VALID_STATUSES = new Set(['met', 'unclear', 'missing']);
 const VALID_EXTENSIONS = /\.(zip|pdf|docx)$/i;
+
 
 function emptyWorkspace() {
   return { version: WORKSPACE_VERSION, selectedJobId: null, jobs: [] };
@@ -48,9 +39,9 @@ export function validateResumeFiles(files) {
   const names = files.map(fileName);
   const rejected = names.filter((name) => !name || !VALID_EXTENSIONS.test(name));
   return {
-    valid: rejected.length === 0,
-    accepted: rejected.length === 0 ? names : [],
+    accepted: names.length > 0 && rejected.length === 0 ? names : [],
     rejected,
+    valid: names.length > 0 && rejected.length === 0,
   };
 }
 
@@ -70,21 +61,42 @@ function normalizeCriterion(criterion) {
   };
 }
 
+function normalizeAssessment(assessment) {
+  if (!isRecord(assessment)
+    || typeof assessment.criterionId !== 'string' || !assessment.criterionId
+    || typeof assessment.criterionName !== 'string' || !assessment.criterionName
+    || !VALID_IMPORTANCE.has(assessment.importance)
+    || !Number.isInteger(assessment.weight) || assessment.weight < 1 || assessment.weight > 5
+    || !VALID_STATUSES.has(assessment.status)
+    || typeof assessment.evidence !== 'string'
+    || typeof assessment.contribution !== 'number' || !Number.isFinite(assessment.contribution)) {
+    return null;
+  }
+  return {
+    criterionId: assessment.criterionId,
+    criterionName: assessment.criterionName,
+    importance: assessment.importance,
+    weight: assessment.weight,
+    status: assessment.status,
+    evidence: assessment.evidence,
+    contribution: assessment.contribution,
+  };
+}
+
 function normalizeCandidate(candidate) {
   if (!isRecord(candidate)
     || typeof candidate.id !== 'string' || !candidate.id
     || typeof candidate.name !== 'string'
     || typeof candidate.sourceFile !== 'string'
-    || typeof candidate.score !== 'number'
+    || typeof candidate.score !== 'number' || !Number.isFinite(candidate.score)
     || !VALID_DECISIONS.has(candidate.decision)
     || typeof candidate.createdAt !== 'string'
     || !Array.isArray(candidate.assessments)) {
     return null;
   }
-  return {
-    ...clone(candidate),
-    assessments: candidate.assessments.map((assessment) => ({ ...assessment })),
-  };
+  const assessments = candidate.assessments.map(normalizeAssessment);
+  if (assessments.some((assessment) => assessment === null)) return null;
+  return { ...clone(candidate), assessments };
 }
 
 function normalizeJob(job) {
@@ -95,10 +107,8 @@ function normalizeJob(job) {
     || !Array.isArray(job.candidates)) {
     return null;
   }
-  const scorecard = job.scorecard.map(normalizeCriterion);
-  if (scorecard.some((criterion) => criterion === null)) return null;
-  const candidates = job.candidates.map(normalizeCandidate);
-  if (candidates.some((candidate) => candidate === null)) return null;
+  const scorecard = job.scorecard.map(normalizeCriterion).filter(Boolean);
+  const candidates = job.candidates.map(normalizeCandidate).filter(Boolean);
   return {
     id: job.id,
     title: job.title,
@@ -110,6 +120,7 @@ function normalizeJob(job) {
     candidates,
   };
 }
+
 
 export function normalizeWorkspace(value) {
   if (!isRecord(value) || value.version !== WORKSPACE_VERSION || !Array.isArray(value.jobs)) {
@@ -160,7 +171,8 @@ export function createCandidateResults(job, files, batchId = 'batch') {
   const validation = validateResumeFiles(files);
   if (!validation.valid) return [];
   const results = [];
-  for (const sourceFile of validation.accepted) {
+  for (let filePosition = 0; filePosition < validation.accepted.length; filePosition += 1) {
+    const sourceFile = validation.accepted[filePosition];
     const isArchive = /\.zip$/i.test(sourceFile);
     const count = isArchive ? 3 : 1;
     for (let index = 0; index < count; index += 1) {
@@ -186,13 +198,13 @@ export function createCandidateResults(job, files, batchId = 'batch') {
       const totalWeight = assessments.reduce((sum, assessment) => sum + assessment.weight, 0);
       const contribution = assessments.reduce((sum, assessment) => sum + assessment.contribution, 0);
       const score = totalWeight === 0 ? 0 : Math.round((contribution / totalWeight) * 100);
-      const identitySeed = `${job.id}|${batchId}|${sourceFile}|${index}`;
+      const identitySeed = `${job.id}|${batchId}|${sourceFile}|${filePosition}|${index}`;
       results.push({
         id: `candidate-${hash(identitySeed).toString(16).padStart(8, '0')}`,
         name: candidateName(sourceFile, index, isArchive),
         sourceFile,
         score,
-        decision: DECISIONS.UNDECIDED,
+        decision: DECISIONS[0],
         createdAt: candidateTimestamp(identitySeed),
         assessments,
       });
@@ -200,20 +212,19 @@ export function createCandidateResults(job, files, batchId = 'batch') {
   }
   return results;
 }
-
 function metric(candidate, key) {
   const assessments = Array.isArray(candidate.assessments) ? candidate.assessments : [];
-  if (key === SORT_KEYS.NAME) return String(candidate.name ?? '').toLocaleLowerCase();
-  if (key === SORT_KEYS.SCORE) return Number(candidate.score) || 0;
-  if (key === SORT_KEYS.EVIDENCE) return assessments.filter((assessment) => typeof assessment.evidence === 'string' && assessment.evidence.trim().length > 0).length;
-  if (key === SORT_KEYS.GAPS) return assessments.filter((assessment) => assessment.status === 'missing').length;
-  if (key === SORT_KEYS.DECISION) return String(candidate.decision ?? '');
+  if (key === 'name') return String(candidate.name ?? '').toLocaleLowerCase();
+  if (key === 'score') return Number(candidate.score) || 0;
+  if (key === 'evidence') return assessments.filter((assessment) => assessment.status === 'met').length;
+  if (key === 'gaps') return assessments.filter((assessment) => assessment.status === 'missing' || assessment.status === 'unclear').length;
+  if (key === 'decision') return String(candidate.decision ?? '');
   return 0;
 }
 
 export function sortCandidates(candidates, options = {}) {
   if (!Array.isArray(candidates)) return [];
-  const key = options.key ?? SORT_KEYS.SCORE;
+  const key = options.key ?? SORT_KEYS[0];
   const direction = options.direction === 'asc' ? 1 : -1;
   return [...candidates].sort((left, right) => {
     const a = metric(left, key);
