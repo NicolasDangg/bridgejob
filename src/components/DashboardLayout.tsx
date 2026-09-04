@@ -168,6 +168,56 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
         break;
     }
   };
+  const mobileActions = (
+    <div className="mb-6 grid grid-cols-2 gap-2 border-b border-gray-200 pb-6 md:hidden">
+      <Button
+        type="button"
+        variant="outline"
+        className="min-h-10 w-full justify-start gap-2 px-3 text-xs"
+        onClick={() => navigate('/accounts')}
+      >
+        <Settings aria-hidden="true" />
+        Account
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        className="min-h-10 w-full justify-start gap-2 px-3 text-xs"
+        onClick={() => navigate('/contact')}
+      >
+        <HelpCircle aria-hidden="true" />
+        Support
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        className="min-h-10 w-full justify-start gap-2 px-3 text-xs"
+        onClick={handleCoachClick}
+        aria-label="AI Career Coach"
+      >
+        <Sparkles aria-hidden="true" />
+        Coach
+        {!isPro && <span className="ml-auto text-[10px] font-black uppercase tracking-wide text-blue-600">Pro</span>}
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        className="min-h-10 w-full justify-start gap-2 px-3 text-xs"
+        onClick={() => alert('Referral program coming soon!')}
+      >
+        <Gift aria-hidden="true" />
+        Referrals
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        className="col-span-2 min-h-10 w-full justify-start px-3 text-xs text-rose-600 hover:text-rose-700"
+        onClick={signOut}
+      >
+        Sign out
+      </Button>
+    </div>
+  );
   const mobileNavItems = [...SIDEBAR_NAV, ...SERVICES_NAV];
   const hasActiveMobileNavItem = mobileNavItems.some((item) => item.label === activeLabel);
 
@@ -175,7 +225,9 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
     <div className="flex flex-1 min-h-0 bg-gray-50 font-sans">
       {/* Sidebar */}
       <aside className={cn(
-        "hidden md:flex border-r border-gray-200 bg-white flex-col sticky top-0 h-screen z-20 transition-all duration-300",
+        "hidden md:flex border-r border-gray-200 bg-white flex-col sticky top-0 h-screen z-20",
+        !reduceMotion && "transition-all duration-300",
+        reduceMotion && "transition-none",
         isCollapsed ? "w-20" : "w-64"
       )}>
         <div className={cn("p-6 flex-1 overflow-hidden", isCollapsed && "px-4")}>
@@ -254,6 +306,7 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
           )}
 
           <NativeButton
+            aria-label="AI Career Coach"
             onClick={handleCoachClick}
             variant="outline"
             className={cn(
@@ -263,7 +316,7 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
             )}
             shimmer={isPro && !reduceMotion}
           >
-            <Sparkles size={20} className={cn("shrink-0", isPro ? "text-blue-500" : "text-gray-400")} />
+            <Sparkles aria-hidden="true" size={20} className={cn("shrink-0", isPro ? "text-blue-500" : "text-gray-400")} />
             {!isCollapsed && (
               <span className="flex items-center gap-2">
                 AI Career Coach
@@ -312,6 +365,7 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
                 </optgroup>
               </select>
             </div>
+            {mobileActions}
             {/* Greeting Header */}
             <div className="mb-8">
               <h1 className="text-2xl font-semibold tracking-tight">
