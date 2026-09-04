@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from "react
 import { useEffect, ReactNode, useRef } from "react";
 import { User as UserIcon, LogOut, LayoutDashboard, CreditCard, Sparkles, Mail, ChevronDown } from "lucide-react";
 import Dashboard from "./components/Dashboard";
+import HRMain from "./components/HRMain";
 import Pricing from "./components/Pricing";
 import Features from "./components/Features";
 import About from "./components/About";
@@ -127,7 +128,7 @@ function PageLayout({ children }: { children: ReactNode }) {
   const headerBg = useTransform(scrollY, [0, 50], ["rgba(255, 255, 255, 1)", "rgba(255, 255, 255, 0.8)"]);
 
   const dashboardPaths = [
-    '/dashboard', '/career-path', '/job-search', '/skill-learning',
+    '/dashboard', '/hr', '/career-path', '/job-search', '/skill-learning',
     '/resume-review', '/accounts', '/security', '/billing', '/notifications'
   ];
   const isDashboardView = dashboardPaths.includes(pathname);
@@ -388,6 +389,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/hr"
+              element={
+                <ProtectedRoute>
+                  <HRMain />
                 </ProtectedRoute>
               }
             />

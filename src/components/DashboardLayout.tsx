@@ -23,7 +23,8 @@ import {
   BookOpen,
   Receipt,
   Gift,
-  FileText
+  FileText,
+  Users
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../lib/AuthContext';
@@ -46,6 +47,7 @@ export const SERVICES_NAV = [
   { label: 'Skill Learning', icon: BookOpen },
   { label: 'Resume Review', icon: Receipt },
   { label: 'Resume Creator', icon: FileText },
+  { label: 'HR Workspace', icon: Users },
 ];
 
 // --- Sub-components ---
@@ -147,6 +149,9 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
         break;
       case 'Resume Creator':
         navigate('/resume-creator');
+        break;
+      case 'HR Workspace':
+        navigate('/hr');
         break;
       default:
         break;

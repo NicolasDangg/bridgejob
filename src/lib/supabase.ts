@@ -12,7 +12,7 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
   return createClient(url, anonKey);
 }
 
-export function buildAuthRedirectUrl(path = '/dashboard') {
+export function buildAuthRedirectUrl(path = '/hr') {
   if (typeof window === 'undefined') return undefined;
   
   // Always use window.location.origin as primary source (captures current domain)

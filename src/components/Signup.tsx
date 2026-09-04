@@ -37,7 +37,7 @@ export default function Signup() {
       };
       setUser(mockUser as any);
       setLoading(false);
-      navigate('/dashboard');
+      navigate('/hr');
       return;
     }
 
@@ -54,7 +54,7 @@ export default function Signup() {
         password,
         options: {
           data: { full_name: fullName, plan: 'free' },
-          emailRedirectTo: buildAuthRedirectUrl('/dashboard'),
+          emailRedirectTo: buildAuthRedirectUrl('/hr'),
         },
       });
 
@@ -64,7 +64,7 @@ export default function Signup() {
         // Supabase behavior: if email confirmation is required, session might be null.
         // If not required, data.user will be populated.
         if (data.user && data.session) {
-          navigate('/dashboard');
+          navigate('/hr');
         } else {
           setSent(true);
           setTimeout(() => navigate('/login'), 3000);
@@ -75,7 +75,7 @@ export default function Signup() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: buildAuthRedirectUrl('/dashboard'),
+          emailRedirectTo: buildAuthRedirectUrl('/hr'),
           data: { full_name: fullName, plan: 'free' },
         },
       });

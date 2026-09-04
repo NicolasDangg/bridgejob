@@ -39,14 +39,14 @@ export default function Login() {
           return;
         }
 
-        navigate("/dashboard");
+        navigate("/hr");
         return;
       }
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.origin + '/dashboard'
+          emailRedirectTo: window.location.origin + '/hr'
         }
       });
 
