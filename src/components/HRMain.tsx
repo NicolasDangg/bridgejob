@@ -323,6 +323,7 @@ export default function HRMain() {
 
     if (criteria.length === 0) {
       setCriteriaError("Add at least one non-empty criterion before creating the role.");
+      firstCriterionRef.current?.focus();
       return;
     }
 

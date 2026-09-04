@@ -4,7 +4,7 @@
  */
 
 import React, { useState, ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -66,7 +66,17 @@ export const IconButton = ({ icon: Icon, className, ...props }: any) => (
   </NativeButton>
 );
 
-export const SidebarItem = ({ icon: Icon, label, active, badge, onClick, isCollapsed }: any) => (
+interface SidebarItemProps {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  active: boolean;
+  badge?: ReactNode;
+  onClick: () => void;
+  isCollapsed: boolean;
+  reduceMotion?: boolean | null;
+}
+
+export const SidebarItem = ({ icon: Icon, label, active, badge, onClick, isCollapsed, reduceMotion }: SidebarItemProps) => (
   <NativeButton
     variant={active ? "default" : "ghost"}
     onClick={onClick}
@@ -78,7 +88,7 @@ export const SidebarItem = ({ icon: Icon, label, active, badge, onClick, isColla
         : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-900",
       isCollapsed && "justify-center px-0 h-14"
     )}
-    shimmer={active}
+    shimmer={active && !reduceMotion}
   >
     <Icon size={22} className={cn("transition-colors shrink-0", active ? "text-white" : "text-slate-400 group-hover:text-slate-900")} />
     {!isCollapsed && <span className="truncate">{label}</span>}
@@ -103,6 +113,7 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
   const { user, userPlan, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const reduceMotion = useReducedMotion();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -157,12 +168,14 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
         break;
     }
   };
+  const mobileNavItems = [...SIDEBAR_NAV, ...SERVICES_NAV];
+  const hasActiveMobileNavItem = mobileNavItems.some((item) => item.label === activeLabel);
 
   return (
     <div className="flex flex-1 min-h-0 bg-gray-50 font-sans">
       {/* Sidebar */}
       <aside className={cn(
-        "border-r border-gray-200 bg-white flex flex-col sticky top-0 h-screen z-20 transition-all duration-300",
+        "hidden md:flex border-r border-gray-200 bg-white flex-col sticky top-0 h-screen z-20 transition-all duration-300",
         isCollapsed ? "w-20" : "w-64"
       )}>
         <div className={cn("p-6 flex-1 overflow-hidden", isCollapsed && "px-4")}>
@@ -182,6 +195,7 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
                 {SIDEBAR_NAV.map((item) => (
                   <SidebarItem
                     key={item.label}
+                    reduceMotion={reduceMotion}
                     {...item}
                     isCollapsed={isCollapsed}
                     active={activeLabel === item.label}
@@ -198,6 +212,7 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
                   <SidebarItem
                     key={item.label}
                     {...item}
+                    reduceMotion={reduceMotion}
                     isCollapsed={isCollapsed}
                     active={activeLabel === item.label}
                     onClick={() => handleSidebarClick(item.label)}
@@ -246,8 +261,7 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
               isCollapsed && "p-0 h-14 w-14 mx-auto",
               !isPro && "opacity-80"
             )}
-            title="AI Career Coach"
-            shimmer={isPro}
+            shimmer={isPro && !reduceMotion}
           >
             <Sparkles size={20} className={cn("shrink-0", isPro ? "text-blue-500" : "text-gray-400")} />
             {!isCollapsed && (
@@ -257,26 +271,47 @@ export default function DashboardLayout({ children, activeLabel, onTabChange, he
               </span>
             )}
           </NativeButton>
-
           <button
+            type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="w-full flex items-center justify-center py-2 text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="min-h-10 w-full flex items-center justify-center py-2 text-gray-400 hover:text-gray-600 transition-colors"
           >
-            {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+            {isCollapsed ? <ChevronRight aria-hidden="true" size={20} /> : <ChevronLeft aria-hidden="true" size={20} />}
           </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto flex flex-col h-screen">
+      <main className="min-w-0 flex-1 overflow-y-auto flex flex-col h-screen">
         <div className="flex-1">
           <motion.div
             key={location.pathname} // Only re-animate on actual route changes, not tab changes
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="px-8 pt-8 pb-12"
+            initial={reduceMotion ? false : { opacity: 0, y: 5 }}
+            animate={{ opacity: 1, ...(reduceMotion ? {} : { y: 0 }) }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.3, ease: "easeOut" }}
+            className="px-4 pt-8 pb-12 sm:px-6 md:px-8"
           >
+            <div className="mb-6 md:hidden">
+              <label htmlFor="mobile-navigation" className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-400">
+                Navigate
+              </label>
+              <select
+                id="mobile-navigation"
+                value={activeLabel ?? ""}
+                onChange={(event) => handleSidebarClick(event.target.value)}
+                className="h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-900 shadow-sm outline-none focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-200"
+              >
+                {!activeLabel && <option value="">Choose a destination</option>}
+                {activeLabel && !hasActiveMobileNavItem && <option value={activeLabel}>{activeLabel}</option>}
+                <optgroup label="Track">
+                  {SIDEBAR_NAV.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}
+                </optgroup>
+                <optgroup label="Services">
+                  {SERVICES_NAV.map((item) => <option key={item.label} value={item.label}>{item.label}</option>)}
+                </optgroup>
+              </select>
+            </div>
             {/* Greeting Header */}
             <div className="mb-8">
               <h1 className="text-2xl font-semibold tracking-tight">
