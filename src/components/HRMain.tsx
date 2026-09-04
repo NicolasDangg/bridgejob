@@ -1,14 +1,28 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode, type RefObject } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import {
+  ArrowDown01,
+  ArrowDownAZ,
   ArrowLeft,
+  ArrowUp01,
+  ArrowUpAZ,
   BriefcaseBusiness,
   Check,
+  CheckCircle2,
+  ChevronDown,
   ChevronRight,
+  ChevronsUpDown,
+  CircleAlert,
+  Clock3,
+  Download,
+  FileText,
+  FileWarning,
+  LoaderCircle,
   MapPin,
   Plus,
   Trash2,
   Users,
+  XCircle,
 } from "lucide-react";
 import DashboardLayout from "./DashboardLayout";
 import { Badge } from "./ui/badge";
@@ -23,7 +37,15 @@ import {
 import { Input } from "./ui/input";
 import { cn } from "../lib/utils";
 import { useAuth } from "../lib/AuthContext";
-import { EMPTY_WORKSPACE, normalizeWorkspace } from "./hrWorkflow.js";
+import {
+  EMPTY_WORKSPACE,
+  createCandidateResults,
+  normalizeWorkspace,
+  serializeCandidatesCsv,
+  sortCandidates,
+  updateCandidateDecision,
+  validateResumeFiles,
+} from "./hrWorkflow.js";
 
 export type Importance = "required" | "preferred";
 export type AssessmentStatus = "met" | "unclear" | "missing";
@@ -91,6 +113,26 @@ interface JobDraft {
 type JobField = "title" | "department" | "location" | "description";
 type JobFieldErrors = Partial<Record<JobField, string>>;
 type View = "portfolio" | "create";
+type UploadPhase = "queued" | "processing" | "complete";
+type CandidateSortKey = "name" | "score" | "evidence" | "gaps" | "decision";
+type SortDirection = "asc" | "desc";
+
+interface UploadStatus {
+  batchId: string;
+  targetJobId: string;
+  targetJobTitle: string;
+  files: string[];
+  phase: UploadPhase;
+}
+
+function slugifyJobTitle(title: string): string {
+  const slug = title
+    .toLocaleLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${slug || "job"}-candidates.csv`;
+}
 
 const STORAGE_PREFIX = "gapless.hr.workspace.";
 const EMPTY_WORKSPACE_VALUE: Workspace = {
@@ -146,6 +188,9 @@ export default function HRMain() {
   const scorecardHeadingRef = useRef<HTMLHeadingElement>(null);
   const previousStepRef = useRef<1 | 2>(1);
   const reduceMotion = useReducedMotion();
+  const [uploadStatus, setUploadStatus] = useState<UploadStatus | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const uploadTimersRef = useRef<number[]>([]);
 
   const isLoading = loadedStorageKey !== storageKey;
   const selectedJob = useMemo(
@@ -154,6 +199,10 @@ export default function HRMain() {
   );
 
   useEffect(() => {
+    uploadTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    uploadTimersRef.current = [];
+    setUploadStatus(null);
+    setUploadError(null);
     let storedWorkspace: Workspace = EMPTY_WORKSPACE_VALUE;
     setView("portfolio");
     setStep(1);
@@ -179,6 +228,10 @@ export default function HRMain() {
       // Local persistence is best effort; the in-memory workspace remains usable.
     }
   }, [loadedStorageKey, storageKey, workspace]);
+  useEffect(() => () => {
+    uploadTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    uploadTimersRef.current = [];
+  }, []);
 
   useEffect(() => {
     if (view !== "create" || previousStepRef.current === step) return;
@@ -294,10 +347,88 @@ export default function HRMain() {
     setFieldErrors({});
     setCriteriaError(null);
   };
+  const handleResumeUpload = (files: FileList | null) => {
+    uploadTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    uploadTimersRef.current = [];
+    setUploadError(null);
+
+    const validation = validateResumeFiles(files);
+    if (!validation.valid) {
+      setUploadStatus(null);
+      setUploadError(
+        validation.rejected.length > 0
+          ? `Unsupported file type: ${validation.rejected.join(", ")}. Choose only .zip, .pdf, or .docx files and try again.`
+          : "Choose at least one .zip, .pdf, or .docx file and try again.",
+      );
+      return;
+    }
+
+    const targetJobId = workspace.selectedJobId;
+    const targetJob = workspace.jobs.find((candidateJob) => candidateJob.id === targetJobId);
+    if (!targetJob) return;
+    const acceptedFiles = [...validation.accepted];
+    const batchId = `batch-${Date.now()}-${getUuid()}`;
+    setUploadStatus({
+      batchId,
+      targetJobId: targetJob.id,
+      targetJobTitle: targetJob.title,
+      files: acceptedFiles,
+      phase: "queued",
+    });
+
+    const processingTimer = window.setTimeout(() => {
+      setUploadStatus((current) => current?.batchId === batchId ? { ...current, phase: "processing" } : current);
+    }, 350);
+    const completeTimer = window.setTimeout(() => {
+      setWorkspace((current) => {
+        const currentTarget = current.jobs.find((candidateJob) => candidateJob.id === targetJob.id);
+        if (!currentTarget) return current;
+        const candidates = createCandidateResults(targetJob, acceptedFiles, batchId);
+        if (candidates.length === 0) return current;
+        return {
+          ...current,
+          jobs: current.jobs.map((candidateJob) => candidateJob.id === targetJob.id
+            ? { ...candidateJob, candidates: [...candidateJob.candidates, ...candidates] }
+            : candidateJob),
+        };
+      });
+      setUploadStatus((current) => current?.batchId === batchId ? { ...current, phase: "complete" } : current);
+    }, 1100);
+    uploadTimersRef.current = [processingTimer, completeTimer];
+  };
+
+  const handleResumeInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    handleResumeUpload(event.currentTarget.files);
+    event.currentTarget.value = "";
+  };
+
+  const handleDecisionChange = (candidateId: string, decision: CandidateDecision) => {
+    setWorkspace((current) => current.selectedJobId
+      ? updateCandidateDecision(current, current.selectedJobId, candidateId, decision)
+      : current);
+  };
+
 
   const pageMotion = reduceMotion
     ? { opacity: 1 }
     : { opacity: 1, y: 0 };
+  const pageHeader = (
+    <header className="flex flex-col gap-4 border-b border-gray-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <div className="min-w-0 space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Recruiting workspace</p>
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Build a focused hiring process.</h1>
+        <p className="max-w-2xl text-base leading-relaxed text-slate-600">
+          Define the role and the scorecard you will use to review candidates consistently.
+        </p>
+      </div>
+      {view === "portfolio" && (
+        <Button type="button" size="lg" className="w-full sm:w-auto" onClick={beginCreating}>
+          <Plus aria-hidden="true" />
+          Add new
+        </Button>
+      )}
+    </header>
+  );
 
   if (isLoading) {
     return (
@@ -321,46 +452,36 @@ export default function HRMain() {
         transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
         className="mx-auto max-w-6xl space-y-6 pb-16"
       >
-        <header className="flex flex-col gap-4 border-b border-gray-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0 space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Recruiting workspace</p>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Build a focused hiring process.</h1>
-            <p className="max-w-2xl text-base leading-relaxed text-slate-600">
-              Define the role and the scorecard you will use to review candidates consistently.
-            </p>
-          </div>
-          {view === "portfolio" && (
-            <Button type="button" size="lg" className="w-full sm:w-auto" onClick={beginCreating}>
-              <Plus aria-hidden="true" />
-              Add new
-            </Button>
-          )}
-        </header>
-
         {view === "create" ? (
-          <CreateFlow
-            draft={draft}
-            step={step}
-            fieldErrors={fieldErrors}
-            criteriaError={criteriaError}
-            titleRef={titleRef}
-            departmentRef={departmentRef}
-            locationRef={locationRef}
-            descriptionRef={descriptionRef}
-            firstCriterionRef={firstCriterionRef}
-            detailsHeadingRef={detailsHeadingRef}
-            scorecardHeadingRef={scorecardHeadingRef}
-            onCancel={cancelCreating}
-            onBack={() => setStep(1)}
-            onContinue={continueToScorecard}
-            onCreate={createJob}
-            onFieldChange={updateDraftField}
-            onCriterionChange={updateCriterion}
-            onAddCriterion={addCriterion}
-            onRemoveCriterion={removeCriterion}
-          />
+          <>
+            {pageHeader}
+            <CreateFlow
+              draft={draft}
+              step={step}
+              fieldErrors={fieldErrors}
+              criteriaError={criteriaError}
+              titleRef={titleRef}
+              departmentRef={departmentRef}
+              locationRef={locationRef}
+              descriptionRef={descriptionRef}
+              firstCriterionRef={firstCriterionRef}
+              detailsHeadingRef={detailsHeadingRef}
+              scorecardHeadingRef={scorecardHeadingRef}
+              onCancel={cancelCreating}
+              onBack={() => setStep(1)}
+              onContinue={continueToScorecard}
+              onCreate={createJob}
+              onFieldChange={updateDraftField}
+              onCriterionChange={updateCriterion}
+              onAddCriterion={addCriterion}
+              onRemoveCriterion={removeCriterion}
+            />
+          </>
         ) : workspace.jobs.length === 0 ? (
-          <EmptyPortfolio />
+          <>
+            {pageHeader}
+            <EmptyPortfolio />
+          </>
         ) : (
           <>
             <JobRail
@@ -368,7 +489,19 @@ export default function HRMain() {
               selectedJobId={workspace.selectedJobId}
               onSelect={(jobId) => setWorkspace((current) => ({ ...current, selectedJobId: jobId }))}
             />
-            {selectedJob && <SelectedJobWorkspace job={selectedJob} />}
+            {selectedJob && (
+              <>
+                {pageHeader}
+                <SelectedJobWorkspace
+                  key={selectedJob.id}
+                  job={selectedJob}
+                  uploadStatus={uploadStatus}
+                  uploadError={uploadError}
+                  onInputChange={handleResumeInputChange}
+                  onDecisionChange={handleDecisionChange}
+                />
+              </>
+            )}
           </>
         )}
       </motion.div>
@@ -443,7 +576,90 @@ function JobRail({
   );
 }
 
-function SelectedJobWorkspace({ job }: { job: RecruitingJob }) {
+function SelectedJobWorkspace({
+  job,
+  uploadStatus,
+  uploadError,
+  onInputChange,
+  onDecisionChange,
+}: {
+  job: RecruitingJob;
+  uploadStatus: UploadStatus | null;
+  uploadError: string | null;
+  onInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onDecisionChange: (candidateId: string, decision: CandidateDecision) => void;
+}) {
+  const [sortState, setSortState] = useState<{ key: CandidateSortKey; direction: SortDirection }>({
+    key: "score",
+    direction: "desc",
+  });
+  const [expandedCandidateIds, setExpandedCandidateIds] = useState<Set<string>>(() => new Set());
+  const sortedCandidates = useMemo(
+    () => sortCandidates(job.candidates, sortState),
+    [job.candidates, sortState],
+  );
+  const highScoreCount = job.candidates.filter((candidate) => candidate.score >= 80).length;
+  const reviewedCount = job.candidates.filter((candidate) => candidate.decision !== "undecided").length;
+  const currentProcessingCount = uploadStatus?.targetJobId === job.id && uploadStatus.phase !== "complete" ? 1 : 0;
+  const isCurrentBatchTarget = uploadStatus?.targetJobId === job.id;
+  const progress = uploadStatus?.phase === "complete" ? 100 : uploadStatus?.phase === "processing" ? 50 : 0;
+
+  const changeSort = (key: CandidateSortKey) => {
+    setSortState((current) => current.key === key
+      ? { key, direction: current.direction === "desc" ? "asc" : "desc" }
+      : { key, direction: key === "name" || key === "decision" ? "asc" : "desc" });
+  };
+
+  const toggleExpanded = (candidateId: string) => {
+    setExpandedCandidateIds((current) => {
+      const next = new Set(current);
+      if (next.has(candidateId)) next.delete(candidateId);
+      else next.add(candidateId);
+      return next;
+    });
+  };
+
+  const exportCsv = () => {
+    if (sortedCandidates.length === 0) return;
+    const blob = new Blob([serializeCandidatesCsv(sortedCandidates)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = slugifyJobTitle(job.title);
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const sortIcon = (key: CandidateSortKey) => {
+    if (sortState.key !== key) return <ChevronsUpDown aria-hidden="true" className="size-4 text-slate-400" />;
+    return sortState.direction === "asc"
+      ? (key === "name" || key === "decision"
+        ? <ArrowUpAZ aria-hidden="true" className="size-4 text-blue-600" />
+        : <ArrowUp01 aria-hidden="true" className="size-4 text-blue-600" />)
+      : (key === "name" || key === "decision"
+        ? <ArrowDownAZ aria-hidden="true" className="size-4 text-blue-600" />
+        : <ArrowDown01 aria-hidden="true" className="size-4 text-blue-600" />);
+  };
+
+  const sortHeader = (key: CandidateSortKey, label: string) => {
+    const active = sortState.key === key;
+    const nextDirection = active && sortState.direction === "desc" ? "ascending" : "descending";
+    const directionLabel = active ? `currently ${sortState.direction === "desc" ? "descending" : "ascending"}` : "not currently sorted";
+    return (
+      <button
+        type="button"
+        onClick={() => changeSort(key)}
+        aria-label={`Sort by ${label}; ${directionLabel}. Activate for ${nextDirection} order.`}
+        className="inline-flex min-h-10 items-center gap-1.5 rounded-md text-left font-semibold outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+      >
+        <span>{label}</span>
+        {sortIcon(key)}
+      </button>
+    );
+  };
+
   return (
     <section aria-labelledby="selected-role-heading" className="space-y-6">
       <Card className="border-gray-200 bg-white shadow-sm">
@@ -463,54 +679,247 @@ function SelectedJobWorkspace({ job }: { job: RecruitingJob }) {
             <h3 className="text-sm font-semibold text-slate-900">Role description</h3>
             <p className="mt-2 max-w-3xl whitespace-pre-wrap text-base leading-relaxed text-slate-600">{job.description}</p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Card className="border-gray-200 bg-gray-50 shadow-none">
-              <CardContent className="flex items-center gap-4 p-5">
-                <Users aria-hidden="true" className="size-5 text-slate-500" />
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Candidates</p>
-                  <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{job.candidates.length}</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard icon={<Users aria-hidden="true" className="size-5" />} label="Total candidates" value={job.candidates.length} />
+            <StatCard icon={<Check aria-hidden="true" className="size-5" />} label="Score 80 or higher" value={highScoreCount} />
+            <StatCard icon={<CheckCircle2 aria-hidden="true" className="size-5" />} label="Reviewed decisions" value={reviewedCount} />
+            <StatCard icon={<LoaderCircle aria-hidden="true" className="size-5" />} label="Current processing" value={currentProcessingCount} />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Scorecard summary</h3>
+            <p className="mt-1 text-sm text-slate-500">Criteria keep each review grounded in the role.</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {job.scorecard.map((criterion) => (
+                <div key={criterion.id} className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-4">
+                  <span className="min-w-0 break-words text-sm font-medium text-slate-800">{criterion.name}</span>
+                  <Badge variant="outline" className="shrink-0 border-slate-200 text-slate-600">
+                    {criterion.importance === "required" ? "Required" : "Preferred"} · {criterion.weight}/5
+                  </Badge>
                 </div>
-              </CardContent>
-            </Card>
-            <Card className="border-gray-200 bg-gray-50 shadow-none">
-              <CardContent className="flex items-center gap-4 p-5">
-                <Check aria-hidden="true" className="size-5 text-slate-500" />
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Scorecard criteria</p>
-                  <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{job.scorecard.length}</p>
-                </div>
-              </CardContent>
-            </Card>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
 
       <Card className="border-gray-200 bg-white shadow-sm">
         <CardHeader>
-          <CardTitle className="text-lg text-slate-900">Scorecard summary</CardTitle>
-          <CardDescription>Use these criteria to keep every candidate review grounded in the role.</CardDescription>
+          <CardTitle className="text-lg text-slate-900">Add candidate files</CardTitle>
+          <CardDescription>Local demo intake accepts ZIP, PDF, and DOCX files. Nothing is uploaded.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
-          {job.scorecard.map((criterion) => (
-            <div key={criterion.id} className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-4">
-              <span className="min-w-0 break-words text-sm font-medium text-slate-800">{criterion.name}</span>
-              <Badge variant="outline" className="shrink-0 border-slate-200 text-slate-600">
-                {criterion.importance === "required" ? "Required" : "Preferred"} · {criterion.weight}/5
-              </Badge>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="resume-files" className="text-sm font-medium text-slate-700">Resume files</label>
+            <Input
+              id="resume-files"
+              type="file"
+              accept=".zip,.pdf,.docx"
+              multiple
+              onChange={onInputChange}
+              aria-describedby="resume-files-help"
+              className="h-auto min-h-11 py-2"
+            />
+            <p id="resume-files-help" className="text-sm text-slate-500">Choose one or more files. Supported types: .zip, .pdf, .docx.</p>
+          </div>
+          {uploadError && (
+            <div role="alert" className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              <FileWarning aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+              <span>{uploadError}</span>
             </div>
-          ))}
+          )}
+          <div role="status" aria-live="polite" aria-atomic="true" className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            <p className="font-medium">This is a local demo. File contents never leave the browser.</p>
+            {!uploadStatus ? (
+              <p className="mt-1 text-slate-500">Choose files above to queue local demo candidates.</p>
+            ) : (
+              <div className="mt-3 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  {uploadStatus.phase === "queued" && <Clock3 aria-hidden="true" className="size-4 text-amber-600" />}
+                  {uploadStatus.phase === "processing" && <LoaderCircle aria-hidden="true" className="size-4 text-blue-600" />}
+                  {uploadStatus.phase === "complete" && <CheckCircle2 aria-hidden="true" className="size-4 text-emerald-600" />}
+                  <span className="font-medium">
+                    {uploadStatus.phase === "queued" && "Queued"}
+                    {uploadStatus.phase === "processing" && "Processing local demo data"}
+                    {uploadStatus.phase === "complete" && "Complete"}
+                  </span>
+                  <span className="text-slate-500">for {uploadStatus.targetJobTitle}</span>
+                </div>
+                <progress value={progress} max={100} aria-label={`${progress}% complete`} className="h-2 w-full accent-blue-600" />
+                <p className="tabular-nums text-slate-600">{progress}% complete · {uploadStatus.files.length} {uploadStatus.files.length === 1 ? "file" : "files"}</p>
+                <ul className="grid gap-1 text-slate-600 sm:grid-cols-2">
+                  {uploadStatus.files.map((file) => <li key={file} className="flex min-w-0 items-start gap-2 break-words"><FileText aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><span>{file}</span></li>)}
+                </ul>
+                {!isCurrentBatchTarget && <p className="text-slate-500">This batch stays assigned to its original target job.</p>}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      <Card className="border-gray-200 bg-gray-50 shadow-none">
-        <CardContent className="p-6">
-          <p className="text-sm font-medium text-slate-700">Resume processing is added in the next plan task.</p>
-          <p className="mt-1 text-sm leading-relaxed text-slate-500">Candidate results will appear here once that workflow is available.</p>
+      <Card className="border-gray-200 bg-white shadow-sm">
+        <CardHeader className="gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="text-lg text-slate-900">Candidate results</CardTitle>
+            <CardDescription>Local demo data only; files are not parsed or scored in the browser.</CardDescription>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={exportCsv}
+            disabled={sortedCandidates.length === 0}
+            aria-label="Export candidates as CSV"
+            className="w-full sm:w-auto"
+          >
+            <Download aria-hidden="true" />
+            Export CSV
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {sortedCandidates.length === 0 ? (
+            <div className="px-6 pb-6 text-sm text-slate-600">
+              No candidates yet. Add one or more resume files above to create local demo candidates.
+            </div>
+          ) : (
+            <div className="max-w-full overflow-x-auto border-t border-gray-100">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <caption className="sr-only">Candidate results for {job.title}</caption>
+                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th scope="col" aria-sort={sortState.key === "name" ? (sortState.direction === "asc" ? "ascending" : "descending") : "none"} className="px-6 py-3">{sortHeader("name", "Candidate")}</th>
+                    <th scope="col" aria-sort={sortState.key === "score" ? (sortState.direction === "asc" ? "ascending" : "descending") : "none"} className="px-4 py-3">{sortHeader("score", "Score")}</th>
+                    <th scope="col" aria-sort={sortState.key === "evidence" ? (sortState.direction === "asc" ? "ascending" : "descending") : "none"} className="px-4 py-3">{sortHeader("evidence", "Evidence met")}</th>
+                    <th scope="col" aria-sort={sortState.key === "gaps" ? (sortState.direction === "asc" ? "ascending" : "descending") : "none"} className="px-4 py-3">{sortHeader("gaps", "Missing + unclear")}</th>
+                    <th scope="col" aria-sort={sortState.key === "decision" ? (sortState.direction === "asc" ? "ascending" : "descending") : "none"} className="px-4 py-3">{sortHeader("decision", "Decision")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {sortedCandidates.map((candidate) => {
+                    const evidenceCount = candidate.assessments.filter((assessment) => assessment.status === "met").length;
+                    const gapsCount = candidate.assessments.filter((assessment) => assessment.status === "missing" || assessment.status === "unclear").length;
+                    const expanded = expandedCandidateIds.has(candidate.id);
+                    const evidenceId = `candidate-evidence-${candidate.id}`;
+                    return (
+                      <FragmentRow
+                        key={candidate.id}
+                        candidate={candidate}
+                        evidenceCount={evidenceCount}
+                        gapsCount={gapsCount}
+                        expanded={expanded}
+                        evidenceId={evidenceId}
+                        onToggle={() => toggleExpanded(candidate.id)}
+                        onDecisionChange={onDecisionChange}
+                      />
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </section>
   );
+}
+
+function StatCard({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
+  return (
+    <Card className="border-gray-200 bg-gray-50 shadow-none">
+      <CardContent className="flex items-center gap-3 p-4">
+        <span className="text-slate-500">{icon}</span>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">{label}</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{value}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FragmentRow({
+  candidate,
+  evidenceCount,
+  gapsCount,
+  expanded,
+  evidenceId,
+  onToggle,
+  onDecisionChange,
+}: {
+  candidate: Candidate;
+  evidenceCount: number;
+  gapsCount: number;
+  expanded: boolean;
+  evidenceId: string;
+  onToggle: () => void;
+  onDecisionChange: (candidateId: string, decision: CandidateDecision) => void;
+}) {
+  return (
+    <>
+      <tr className="align-top">
+        <th scope="row" className="px-6 py-4 font-medium text-slate-900">
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls={evidenceId}
+            onClick={onToggle}
+            className="inline-flex min-h-10 max-w-full items-start gap-2 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
+            <ChevronDown aria-hidden="true" className={cn("mt-0.5 size-4 shrink-0 transition-transform", expanded && "rotate-180")} />
+            <span className="min-w-0 break-words">
+              <span className="block">{candidate.name}</span>
+              <span className="mt-1 block break-all text-xs font-normal text-slate-500">{candidate.sourceFile}</span>
+            </span>
+          </button>
+        </th>
+        <td className="px-4 py-4 font-semibold tabular-nums text-slate-900">{candidate.score}</td>
+        <td className="px-4 py-4 tabular-nums text-slate-700"><span className="inline-flex items-center gap-1.5"><CheckCircle2 aria-hidden="true" className="size-4 text-emerald-600" />{evidenceCount}</span></td>
+        <td className="px-4 py-4 tabular-nums text-slate-700"><span className="inline-flex items-center gap-1.5"><CircleAlert aria-hidden="true" className="size-4 text-amber-600" />{gapsCount}</span></td>
+        <td className="px-4 py-4">
+          <label htmlFor={`decision-${candidate.id}`} className="sr-only">Decision for {candidate.name}</label>
+          <select
+            id={`decision-${candidate.id}`}
+            value={candidate.decision}
+            onChange={(event) => onDecisionChange(candidate.id, event.currentTarget.value as CandidateDecision)}
+            className="min-h-10 rounded-md border border-slate-300 bg-white px-3 py-2 text-base text-slate-800 outline-none focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-200 md:text-sm"
+          >
+            <option value="undecided">Undecided</option>
+            <option value="advance">Advance</option>
+            <option value="hold">Hold</option>
+            <option value="reject">Reject</option>
+          </select>
+        </td>
+      </tr>
+      {expanded && (
+        <tr>
+          <td id={evidenceId} colSpan={5} className="bg-slate-50 px-6 py-5">
+            <h3 className="text-sm font-semibold text-slate-900">Assessment evidence for {candidate.name}</h3>
+            <ul className="mt-3 space-y-3">
+              {candidate.assessments.map((assessment) => (
+                <li key={assessment.criterionId} className="rounded-lg border border-slate-200 bg-white p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium text-slate-900">{assessment.criterionName}</span>
+                    <Badge variant="outline" className="border-slate-200 text-slate-600">{assessment.importance === "required" ? "Required" : "Preferred"}</Badge>
+                    <AssessmentStatus status={assessment.status} />
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600"><span className="font-medium text-slate-800">Contribution:</span> {assessment.contribution} points</p>
+                  <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700"><span className="font-medium text-slate-800">Evidence:</span> {assessment.evidence || "No evidence supplied in local demo data."}</p>
+                </li>
+              ))}
+            </ul>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function AssessmentStatus({ status }: { status: AssessmentStatus }) {
+  if (status === "met") {
+    return <Badge className="gap-1 bg-emerald-100 text-emerald-800"><CheckCircle2 aria-hidden="true" className="size-3.5" />Met</Badge>;
+  }
+  if (status === "unclear") {
+    return <Badge className="gap-1 bg-amber-100 text-amber-800"><CircleAlert aria-hidden="true" className="size-3.5" />Unclear</Badge>;
+  }
+  return <Badge className="gap-1 bg-red-100 text-red-800"><XCircle aria-hidden="true" className="size-3.5" />Missing</Badge>;
 }
 
 function CreateFlow({
